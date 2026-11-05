@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Коллекционер вкусов</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --bg: #141414;
+  --card: #1A1A1A;
+  --line: #2A2A2A;
+  --accent: #A6FF00;
+  --text: #FFFFFF;
+  --muted: #B3B3B3;
+  --nav-h: 64px;
+  --zoom: 1;               /* зум картинок банок; 1 = без зума (новый формат 3:4 уже с нужными полями) */
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { min-height: 100vh; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:disabled { cursor: default; }
+
+main { padding: 16px 14px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+
+/* ── шапка экрана ── */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.top .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.3px; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.pill { border: 1px solid var(--accent); color: var(--accent); padding: 8px 14px; border-radius: 999px;
+  font-weight: 600; font-size: 14px; white-space: nowrap; transition: background .15s, color .15s; }
+.pill:active { background: var(--accent); color: #000; }
+.back { width: 36px; height: 36px; flex: none; border: 1px solid var(--line); background: var(--card);
+  border-radius: 50%; font-size: 22px; line-height: 1; color: var(--text); padding-bottom: 3px; }
+
+/* ── сетка банок: 4 в ряд, картинки 3:4 (например 750x1000) → вертикальные плитки ── */
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.grid.four { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tile { position: relative; display: block; text-align: left; min-width: 0; }
+.can { position: relative; aspect-ratio: 3 / 4; background: var(--card); border: 1px solid var(--line);
+  border-radius: 14px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  transition: border-color .15s, transform .1s; }
+/* зум задаётся через --zoom в :root; при значении > 1 .can обрезает поля через overflow:hidden */
+.can img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 0;
+  transform: scale(var(--zoom)); transform-origin: center; }
+.tile:active .can { border-color: var(--accent); transform: scale(.97); }
+.badge { position: absolute; top: 6px; right: 6px; background: var(--accent); color: #000;
+  font-size: 11px; font-weight: 800; border-radius: 8px; padding: 2px 6px; }
+.tile.off .can { opacity: .6; }
+.tile.off img { filter: grayscale(0); }
+.ph { font-size: 30px; opacity: .5; }
+
+
+/* ── категории каталога ── */
+.cat { margin-bottom: 26px; }
+.cat-head { display: flex; justify-content: space-between; align-items: baseline; margin: 0 2px 10px; }
+.cat-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.cat-head span { color: var(--muted); font-size: 13px; }
+
+/* ── пустые состояния, загрузка, ошибки ── */
+.empty { text-align: center; color: var(--muted); padding: 56px 24px; line-height: 1.5; }
+.empty .emoji { font-size: 44px; margin-bottom: 10px; }
+.empty b { color: var(--text); display: block; font-size: 17px; margin-bottom: 6px; }
+.empty .pill { margin-top: 16px; }
+.skel { background: linear-gradient(90deg, var(--card), #232323, var(--card)); background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ── нижняя навигация ── */
+nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; z-index: 10;
+  background: rgba(20,20,20,.96); backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom); }
+nav button { flex: 1; height: var(--nav-h); display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px; color: var(--muted); font-size: 11px; }
+nav button.active { color: var(--accent); }
+nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── модальное окно управления вкусом ── */
+.overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  padding: 10px; background: rgba(0,0,0,.72); backdrop-filter: blur(4px); animation: fade .15s ease; }
+.modal { position: relative; width: 100%; max-width: 560px; max-height: 94vh; overflow: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 14px;
+  animation: pop .18s ease; }
+/* верх окна: крупное фото слева (доминирует), информация справа */
+.m-top { display: flex; align-items: flex-start; gap: 12px; }
+.modal .pic { flex: 0 0 64%; aspect-ratio: 3 / 4; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 16px; display: flex; align-items: center;
+  justify-content: center; overflow: hidden; }
+.modal .pic img { width: 100%; height: 100%; object-fit: contain; display: block; padding: 0;
+  transform: scale(var(--zoom)); transform-origin: center; }
+.modal .pic .ph { font-size: 56px; }
+.modal .info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 20px; }
+.modal h3 { margin: 0; font-size: 15px; line-height: 1.2; text-align: left; word-break: break-word; }
+.tags { display: flex; gap: 6px; justify-content: flex-start; flex-wrap: wrap; }
+.tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 2px 8px; }
+.tag.lime { color: var(--accent); border-color: var(--accent); }
+.added { color: var(--muted); font-size: 12px; text-align: left; }
+
+.rate-box { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.rate-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
+.rate-val { color: var(--accent); font-size: 20px; font-weight: 800; }
+.rate { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.rate button { height: 42px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px;
+  font-weight: 700; font-size: 16px; transition: background .12s, color .12s, border-color .12s; }
+.rate button:active { border-color: var(--accent); }
+.rate button.sel { background: var(--accent); color: #000; border-color: var(--accent); }
+.err { color: var(--text); font-size: 13px; text-align: center; min-height: 0; }
+.err:empty { display: none; }
+
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.btn { width: 100%; height: 46px; border-radius: 12px; background: var(--accent); color: #000;
+  font-weight: 700; font-size: 15px; transition: opacity .15s; }
+.btn:disabled { opacity: .35; }
+.btn.ghost { background: none; color: var(--muted); border: 1px solid var(--line); font-weight: 600; }
+.btn.ghost.armed { color: var(--accent); border-color: var(--accent); }
+.close { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; color: var(--muted); font-size: 20px; z-index: 1; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(.94) translateY(8px); } }
+
+/* ── toast ── */
+.toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 76px + env(safe-area-inset-bottom)); z-index: 60;
+  transform: translate(-50%, 12px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  background: var(--card); color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 18px; padding: 9px 18px; font-size: 14px; font-weight: 600;
+  width: max-content; max-width: calc(100vw - 32px); text-align: center; line-height: 1.3; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── профиль ── */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+.card-title { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 14px; }
+.card-title h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.card-title span { color: var(--muted); font-size: 12px; }
+.me { display: flex; align-items: center; gap: 14px; }
+.avatar { width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--bg);
+  border: 2px solid var(--accent); color: var(--accent); font-size: 24px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0; transition: opacity .3s ease; }
+.avatar img.ok { opacity: 1; }
+.me .who { min-width: 0; }
+.me .nm { font-size: 18px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me .hd { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.note { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+.stat { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px 8px; text-align: center; }
+.stat b { display: block; font-size: 22px; font-weight: 800; }
+.stat b.accent { color: var(--accent); }
+.stat small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+.crow { margin-bottom: 12px; }
+.crow:last-child { margin-bottom: 0; }
+.crow .line { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; margin-bottom: 6px; }
+.crow .line span { color: var(--muted); font-size: 13px; }
+.bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+/* матрица активности (26 недель × 7 дней) */
+.heat-months { display: grid; grid-template-columns: repeat(var(--cols, 13), 1fr); gap: 3px; height: 14px; margin-bottom: 4px; }
+.heat-months span { font-size: 10px; line-height: 14px; color: var(--muted); white-space: nowrap; }
+.heat { display: grid; grid-template-columns: repeat(var(--cols, 13), 1fr); grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column; gap: 3px; }
+.heat.dense { gap: 2px; }
+/* короткие периоды (неделя, месяц): календарь 7 колонок (Пн–Вс), недели — строками */
+.heat-wd { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+.heat-wd span { text-align: center; font-size: 10px; color: var(--muted); }
+.heat.cal { grid-template-columns: repeat(7, 1fr); grid-template-rows: none; grid-auto-flow: row; gap: 6px; }
+.heat.cal .cell { aspect-ratio: auto; height: 38px; border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; color: var(--muted); }
+.heat.cal .cell.l1, .heat.cal .cell.l2 { color: var(--text); }
+.heat.cal .cell.l3, .heat.cal .cell.l4 { color: #000; font-weight: 700; }
+.heat.cal .cell.none { color: transparent; }
+.per { height: 32px; max-width: 60%; padding: 0 30px 0 12px; background-color: var(--card); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600; outline: none;
+  cursor: pointer; -webkit-appearance: none; appearance: none; transition: border-color .15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23B3B3B3' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; }
+.per:focus, .per:active { border-color: var(--accent); }
+.per option { background: var(--card); color: var(--text); }
+.cell { aspect-ratio: 1 / 1; border-radius: 2px; background: #202020; }
+.cell.l1 { background: #425818; }
+.cell.l2 { background: #639010; }
+.cell.l3 { background: #85C708; }
+.cell.l4 { background: #A6FF00; }
+.cell.none { background: transparent; }
+.legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 12px;
+  color: var(--muted); font-size: 12px; white-space: nowrap; }
+.legend .cell { width: 12px; flex: none; }
+.legend em { font-style: normal; margin: 0 4px; }
+
+/* ───────── v2: вишлист, поиск, пометки ───────── */
+[hidden] { display: none !important; }
+.ico { display: inline-flex; flex: none; }
+.ico svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+
+/* значок «в вишлисте» в правом верхнем углу плитки (вне .can, чтобы не серел вместе с банкой) */
+.mark { position: absolute; top: 6px; right: 6px; z-index: 1; width: 22px; height: 22px; padding: 5px;
+  border-radius: 50%; background: var(--bg); border: 1px solid var(--accent); color: var(--accent);
+  pointer-events: none; }
+.mark svg { fill: currentColor; stroke-width: 1.4; }
+
+/* кнопка «Вишлист» — поверх экрана, над нижней навигацией */
+.fab { position: fixed; z-index: 9; display: flex; align-items: center; gap: 8px; height: 46px;
+  right: max(14px, calc((100vw - 640px) / 2 + 14px));
+  bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom));
+  padding: 0 16px 0 14px; border-radius: 999px; background: var(--accent); color: #000;
+  font-weight: 800; font-size: 15px;
+  box-shadow: 0 8px 24px rgba(166,255,0,.22), 0 2px 8px rgba(0,0,0,.55); transition: transform .1s; }
+.fab:active { transform: scale(.96); }
+.fab .ico { width: 20px; height: 20px; }
+.fab .cnt { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #000;
+  color: var(--accent); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.fab-space { padding-bottom: 64px; }
+
+/* поиск */
+.search { position: relative; margin-bottom: 14px; }
+.search input { width: 100%; height: 48px; padding: 0 44px; background: var(--card); color: var(--text);
+  border: 1px solid var(--line); border-radius: 14px; font: inherit; font-size: 16px; outline: none;
+  -webkit-appearance: none; appearance: none; transition: border-color .15s; }
+.search input:focus { border-color: var(--accent); }
+.search input::placeholder { color: var(--muted); }
+.search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.search .si { position: absolute; left: 14px; top: 15px; width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
+.search .clr { position: absolute; right: 7px; top: 7px; width: 34px; height: 34px; border-radius: 50%;
+  color: var(--muted); font-size: 16px; }
+
+.photo { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  padding: 16px 14px; margin-bottom: 18px; background: var(--card); border: 1.5px dashed var(--line);
+  border-radius: 16px; transition: border-color .15s; }
+.photo:active { border-color: var(--accent); }
+.photo .ico { width: 40px; height: 40px; padding: 9px; border-radius: 12px; background: var(--bg);
+  border: 1px solid var(--line); color: var(--accent); }
+.photo b { font-size: 15px; }
+.photo small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+.res-meta { color: var(--muted); font-size: 13px; margin: 0 2px 10px; }
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; min-width: 0;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px 8px 8px;
+  transition: border-color .15s, transform .1s; }
+.row:active { border-color: var(--accent); transform: scale(.99); }
+.row .th { width: 48px; flex: none; aspect-ratio: 3 / 4; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.row .th img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.row .th .ph { font-size: 20px; }
+.row .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.row .nm { font-size: 15px; font-weight: 700; line-height: 1.2; word-break: break-word; }
+.row .ct { color: var(--muted); font-size: 12px; }
+
+/* выбор действия в модалке поиска */
+.choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choice button { min-height: 48px; padding: 0 8px; border: 1px solid var(--line); background: var(--bg);
+  border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center;
+  justify-content: center; gap: 6px; transition: border-color .12s, color .12s, background .12s; }
+.choice button .ico { width: 16px; height: 16px; }
+.choice button.sel { border-color: var(--accent); color: var(--accent); background: rgba(166,255,0,.08); }
+.m-note { color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+/* ───────── v3: добавление по фото ───────── */
+/* визуально скрытый input: остаётся «видимым» для системы, но не для глаз */
+.vh { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; overflow: hidden;
+  pointer-events: none; z-index: -1; }
+label.btn { display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none;
+  -webkit-user-select: none; }
+label.btn:active { opacity: .8; }
+.cam { position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column; background: #000; animation: fade .15s ease; }
+.cam-view { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #000; }
+.cam-view video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+/* видоискатель: рамка остаётся яркой, всё вокруг затемнено на 50% её box-shadow */
+.cam-frame { position: absolute; border: 2px solid rgba(255,255,255,.92); border-radius: 22px;
+  box-shadow: 0 0 0 200vmax rgba(0,0,0,.5); pointer-events: none; }
+.cam-hint { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font-size: 13px;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); pointer-events: none; }
+.cam-x { position: absolute; z-index: 1; top: calc(10px + env(safe-area-inset-top)); right: 12px; width: 38px; height: 38px;
+  border-radius: 50%; background: rgba(20,20,20,.7); color: var(--text); font-size: 18px; }
+.cam-bar { display: flex; justify-content: center; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: var(--bg); }
+.shutter { width: 68px; height: 68px; border-radius: 50%; background: var(--accent); border: 4px solid var(--bg);
+  box-shadow: 0 0 0 3px var(--accent); transition: transform .1s; }
+.shutter:active { transform: scale(.92); }
+.modal.sheet { max-width: 380px; gap: 12px; }
+.modal .sheet-t { font-size: 18px; margin-right: 32px; }
+.scan { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 14px; padding: 24px; text-align: center;
+  background: rgba(20,20,20,.95); backdrop-filter: blur(6px); animation: fade .15s ease; }
+.scan .shot { position: relative; width: 132px; aspect-ratio: 3 / 4; overflow: hidden; background: var(--card);
+  border: 1px solid var(--line); border-radius: 16px; }
+.scan .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan .shot::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--accent);
+  box-shadow: 0 0 14px var(--accent); animation: sweep 1.3s ease-in-out infinite alternate; }
+.scan b { font-size: 17px; }
+@keyframes sweep { to { top: calc(100% - 2px); } }
+@media (prefers-reduced-motion: reduce) { .scan .shot::after { animation: none; top: 50%; } }
+
+/* ───────── v4: предложения, настройки, админка ───────── */
+.gear { width: 38px; height: 38px; flex: none; border-radius: 50%; background: var(--card); border: 1px solid var(--line);
+  color: var(--muted); display: flex; align-items: center; justify-content: center; transition: color .15s, border-color .15s; }
+.gear:active { color: var(--accent); border-color: var(--accent); }
+.gear .ico { width: 20px; height: 20px; }
+.sugg { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 14px;
+  margin-bottom: 18px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+
+.f { display: flex; flex-direction: column; gap: 6px; }
+.f-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+.field { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; font: inherit; font-size: 16px; outline: none; resize: none; -webkit-appearance: none; appearance: none;
+  transition: border-color .15s; }
+textarea.field { min-height: 104px; line-height: 1.4; }
+.field:focus { border-color: var(--accent); }
+.field::placeholder { color: var(--muted); }
+
+.srow { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px 16px; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px; transition: border-color .15s, transform .1s; }
+.srow:active { border-color: var(--accent); transform: scale(.99); }
+.srow .st { flex: 1; min-width: 0; }
+.srow b { display: block; font-size: 15px; }
+.srow small { color: var(--muted); font-size: 12px; }
+.srow .chev { color: var(--muted); font-size: 22px; line-height: 1; }
+.srow .cnt { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; background: var(--accent); color: #000;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; height: 40px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px;
+  font-weight: 700; font-size: 14px; color: var(--text); }
+.seg button.sel { border-color: var(--accent); color: var(--accent); background: rgba(166,255,0,.08); }
+.card-title .soon { border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; font-size: 11px; }
+
+.task { border-top: 1px solid var(--line); padding: 12px 0 0; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.task:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.t-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.t-head b { color: var(--accent); font-size: 15px; }
+.t-meta { color: var(--muted); font-size: 12px; }
+.t-body { font-size: 15px; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
+.btn.sm { height: 38px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main id="main"></main>
+<nav id="nav"></nav>
+
+<script>
+(() => {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    try {
+      tg.setHeaderColor('#141414');
+      tg.setBackgroundColor('#141414');
+      if (tg.setBottomBarColor) tg.setBottomBarColor('#141414');
+    } catch (e) { /* старые версии клиента — не критично */ }
+  }
+
+  const main = document.getElementById('main');
+  const nav = document.getElementById('nav');
+
+  const ICONS = {
+    collection: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+    profile: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+    bookmark: '<svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
+    plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    camera: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  };
+  const TABS = [
+    { id: 'collection', label: 'Коллекция' },
+    { id: 'search', label: 'Поиск' },
+    { id: 'profile', label: 'Профиль' },
+  ];
+
+  // периоды матрицы активности: weeks — сколько недель показываем; cal — календарь (недели строками)
+  const PERIODS = [
+    { label: 'за неделю', weeks: 1, cal: true },
+    { label: 'за месяц', weeks: 4, cal: true },
+    { label: 'за 3 месяца', weeks: 13, cal: false },
+    { label: 'за год', weeks: 52, cal: false },
+  ];
+  let periodIdx = 0;                                    // выбранный период живёт между перерисовками экрана
+  // sub: main | catalog | wishlist (внутри «Коллекции») | settings | admin (внутри «Профиля»)
+  // q — запрос поиска; photoFails — неудачных или ложных распознаваний по фото подряд (с 1-й показываем «Предложить вкус»)
+  const state = { tab: 'collection', sub: 'main', q: '', photoFails: 0 };
+  let renderSeq = 0;
+  let modalEl = null;
+
+  /* ── утилиты ── */
+  // Все тексты вставляются через textContent — названия из базы не могут сломать вёрстку.
+  function el(tag, props, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') n.className = v;
+      else if (k === 'text') n.textContent = v;
+      else if (k === 'html') n.innerHTML = v;            // только статичные иконки
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c);
+    return n;
+  }
+
+  async function api(path, { method = 'GET', body, signal } = {}) {
+    const headers = {
+      'X-Telegram-Init-Data': (tg && tg.initData) || '',
+      'ngrok-skip-browser-warning': '1',
+    };
+    // FormData отправляем как есть: браузер сам выставит multipart-границу
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
+    const resp = await fetch(path, {
+      method,
+      headers,
+      signal,
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      let detail = '';
+      try {
+        const j = await resp.json();
+        if (typeof j.detail === 'string') detail = j.detail;   // у 422 detail — массив, его не показываем
+      } catch (e) {}
+      const err = new Error(detail || ('Ошибка ' + resp.status));
+      err.status = resp.status;
+      throw err;
+    }
+    return resp.json();
+  }
+
+  function parseUtc(s) {                                 // сервер отдаёт UTC: 'YYYY-MM-DD HH:MM:SS'
+    if (!s) return null;
+    const d = new Date(s.replace(' ', 'T') + 'Z');
+    return isNaN(d) ? null : d;
+  }
+
+  function fmtDate(s) {
+    const d = parseUtc(s);
+    return d ? d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+  }
+
+  function plural(n, forms) {                            // ['банка', 'банки', 'банок']
+    const m = n % 100, k = n % 10;
+    if (m > 10 && m < 20) return forms[2];
+    if (k === 1) return forms[0];
+    if (k >= 2 && k <= 4) return forms[1];
+    return forms[2];
+  }
+  const CANS = ['банка', 'банки', 'банок'];
+
+  // <img src> не может отправить свои заголовки, а ngrok (бесплатный) вместо картинки
+  // отдаёт HTML-страницу с предупреждением. Поэтому качаем картинку через fetch()
+  // с заголовком ngrok-skip-browser-warning и показываем через blob-URL.
+  const blobCache = new Map();                      // src -> Promise<blob-URL>
+  function loadBlob(src) {
+    if (!blobCache.has(src)) {
+      blobCache.set(src, fetch(src, { headers: { 'ngrok-skip-browser-warning': '1' } })
+        .then((r) => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.blob();
+        })
+        .then((b) => {
+          if (!b.type.startsWith('image/')) throw new Error('not an image');
+          return URL.createObjectURL(b);
+        })
+        .catch((e) => { blobCache.delete(src); throw e; }));
+    }
+    return blobCache.get(src);
+  }
+
+  // Ленивая загрузка: качаем картинку, только когда плитка подъезжает к экрану
+  const imgObserver = 'IntersectionObserver' in window
+    ? new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) { imgObserver.unobserve(e.target); e.target._load(); }
+        }
+      }, { rootMargin: '300px' })
+    : null;
+
+  function canImg(src, alt) {
+    if (!src) return el('div', { class: 'ph', text: '🥤' });
+    const img = el('img', { alt, decoding: 'async' });
+    const fail = () => img.replaceWith(el('div', { class: 'ph', text: '🥤' }));
+    img._load = () => loadBlob(src).then((url) => { img.src = url; }, fail);
+    img.addEventListener('error', fail);
+    if (imgObserver) imgObserver.observe(img); else img._load();
+    return img;
+  }
+
+  function haptic() {
+    try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {}
+  }
+  function hapticOk() {
+    try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = el('div', { id: 'toast', class: 'toast' }); document.body.append(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3600);   // было 1800 мс: даём время спокойно прочитать
+  }
+
+  /* ── плитка банки ── */
+  function tile(item, { badge, off, wish, onclick }) {
+    return el('button', { class: 'tile' + (off ? ' off' : ''), 'aria-label': item.title + (wish ? ', в вишлисте' : ''), onclick },
+      el('div', { class: 'can' },
+        canImg(item.image, item.title),
+        badge != null ? el('span', { class: 'badge', text: String(badge) }) : null),
+      wish ? el('span', { class: 'ico mark', 'aria-hidden': 'true', html: ICONS.bookmark }) : null);
+  }
+
+  function skeleton() {
+    return el('div', { class: 'grid' },
+      Array.from({ length: 12 }, () => el('div', { class: 'tile' }, el('div', { class: 'can skel' }))));
+  }
+
+  /* ── модальное окно вкуса ──
+     mode:
+       view   — только просмотр (каталог «Все вкусы»), без изменения данных
+       manage — вкус в коллекции: изменить оценку / удалить
+       wish   — вкус в вишлисте: перенести в коллекцию (с оценкой) / удалить из вишлиста
+       add    — вкус нигде не числится (поиск): выбрать «в вишлист» или «в коллекцию»;
+                оценка появляется только после выбора «в коллекцию» */
+  function openModal(item, { mode, category, fromPhoto }) {
+    closeModal();
+    haptic();
+    const collected = mode === 'manage' || (mode === 'view' && !!item.is_collected);
+    const wished = mode === 'wish' || (mode === 'view' && !collected && !!item.in_wishlist);
+    const initial = mode === 'manage' && item.rating != null ? item.rating : null;
+    let selected = initial;
+    let choice = null;                                   // add: 'wish' | 'collect'
+    let busy = false;
+
+    const valueEl = el('span', { class: 'rate-val' });
+    const errEl = el('div', { class: 'err' });
+    const rateBtns = Array.from({ length: 10 }, (_, i) => {
+      const n = i + 1;
+      return el('button', {
+        type: 'button', text: String(n), 'aria-label': 'Оценка ' + n,
+        onclick: () => { if (busy) return; selected = n; errEl.textContent = ''; haptic(); sync(); },
+      });
+    });
+    const rateBox = el('div', { class: 'rate-box' },
+      el('div', { class: 'rate-head' }, el('span', { text: 'Ваша оценка' }), valueEl),
+      el('div', { class: 'rate' }, rateBtns));
+
+    const choiceDefs = [
+      { id: 'wish', label: 'В вишлист', icon: ICONS.bookmark },
+      { id: 'collect', label: 'В коллекцию', icon: ICONS.plus },
+    ];
+    const choiceBtns = mode === 'add'
+      ? choiceDefs.map((c) => el('button', {
+          type: 'button',
+          onclick: () => { if (busy) return; choice = c.id; errEl.textContent = ''; haptic(); sync(); },
+        }, el('span', { class: 'ico', html: c.icon }), el('span', { text: c.label })))
+      : [];
+
+    const primary = mode === 'view' ? null : el('button', { class: 'btn', type: 'button', onclick: submit });
+    const delLabel = mode === 'manage' ? 'Удалить из коллекции' : 'Удалить из вишлиста';
+    const delBtn = (mode === 'manage' || mode === 'wish')
+      ? el('button', { class: 'btn ghost', type: 'button', text: delLabel, onclick: remove })
+      : null;
+
+    // Только для вкуса, найденного по фото: распознали неверно → считаем попытку неудачной
+    // и сразу предлагаем отправить вкус на добавление в каталог.
+    const wrongBtn = fromPhoto && mode !== 'view'
+      ? el('button', { class: 'btn ghost', type: 'button', text: 'Это не тот вкус', onclick: wrongFlavor })
+      : null;
+    function wrongFlavor() {
+      if (busy) return;
+      closeModal();
+      state.photoFails += 1;
+      state.tab = 'search'; state.sub = 'main';
+      render().then(() => openSuggestFlavor({ source: 'photo', wrong: true }));
+    }
+
+    function sync() {
+      const showRate = mode === 'manage' || mode === 'wish' || (mode === 'add' && choice === 'collect');
+      rateBox.hidden = !showRate;
+      rateBtns.forEach((b, i) => b.classList.toggle('sel', selected === i + 1));
+      valueEl.textContent = selected ? selected + '/10' : '—';
+      choiceBtns.forEach((b, i) => b.classList.toggle('sel', choice === choiceDefs[i].id));
+      if (primary) {
+        let label, ok;
+        if (mode === 'manage') {
+          const changed = selected !== initial;
+          ok = !!selected && changed;
+          label = !selected ? 'Выберите оценку' : changed ? 'Сохранить оценку' : 'Оценка не изменена';
+        } else if (mode === 'wish') {
+          ok = !!selected;
+          label = selected ? 'Перенести в коллекцию' : 'Выберите оценку для переноса';
+        } else if (choice === 'wish') {
+          ok = true; label = 'Добавить в вишлист';
+        } else if (choice === 'collect') {
+          ok = !!selected; label = selected ? 'Добавить в коллекцию' : 'Выберите оценку';
+        } else {
+          ok = false; label = 'Выберите действие';
+        }
+        primary.disabled = busy || !ok;
+        primary.textContent = label;
+      }
+      if (delBtn) delBtn.disabled = busy;
+      if (wrongBtn) wrongBtn.disabled = busy;
+    }
+
+    function done(msg) {
+      hapticOk();
+      closeModal();
+      toast(msg);
+      render({ keepScroll: true });
+    }
+
+    async function act(call, okMsg, failMsg) {
+      busy = true; errEl.textContent = ''; sync();
+      try {
+        await call();
+        done(okMsg);
+      } catch (e) {
+        busy = false;
+        errEl.textContent = '⚠️ ' + (e.message || failMsg);
+        sync();
+      }
+    }
+
+    function submit() {
+      if (busy || !primary || primary.disabled) return;
+      const id = item.id;
+      if (mode === 'manage')
+        return act(() => api('/api/collection/' + id, { method: 'PUT', body: { rating: selected } }),
+          'Оценка сохранена', 'Не удалось сохранить');
+      if (mode === 'wish')
+        return act(() => api(`/api/wishlist/${id}/collect`, { method: 'POST', body: { rating: selected } }),
+          'Перенесено в коллекцию', 'Не удалось перенести');
+      if (choice === 'wish')
+        return act(() => api('/api/wishlist/' + id, { method: 'PUT' }),
+          'Добавлено в вишлист', 'Не удалось добавить');
+      if (choice === 'collect')
+        return act(() => api('/api/collection/' + id, { method: 'PUT', body: { rating: selected } }),
+          'Добавлено в коллекцию', 'Не удалось добавить');
+    }
+
+    let armed = false, armTimer = null;
+    async function remove() {
+      if (busy) return;
+      if (!armed) {                                      // двухшаговое подтверждение
+        armed = true;
+        delBtn.textContent = 'Нажмите ещё раз, чтобы удалить';
+        delBtn.classList.add('armed');
+        armTimer = setTimeout(() => {
+          armed = false;
+          delBtn.textContent = delLabel;
+          delBtn.classList.remove('armed');
+        }, 3000);
+        return;
+      }
+      clearTimeout(armTimer);
+      armed = false;
+      delBtn.textContent = delLabel;
+      delBtn.classList.remove('armed');
+      const url = (mode === 'manage' ? '/api/collection/' : '/api/wishlist/') + item.id;
+      await act(() => api(url, { method: 'DELETE' }),
+        mode === 'manage' ? 'Удалено из коллекции' : 'Удалено из вишлиста', 'Не удалось удалить');
+    }
+
+    const dateLine = collected && item.added_at ? 'Добавлено: ' + fmtDate(item.added_at)
+      : mode === 'wish' && item.added_at ? 'В вишлисте с ' + fmtDate(item.added_at) : null;
+
+    const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
+      el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' },
+        el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('div', { class: 'm-top' },
+          el('div', { class: 'pic' }, canImg(item.image, item.title)),
+          el('div', { class: 'info' },
+            el('h3', { text: item.title }),
+            el('div', { class: 'tags' },
+              category ? el('span', { class: 'tag', text: category }) : null,
+              collected ? el('span', { class: 'tag lime', text: 'В коллекции' }) : null,
+              wished ? el('span', { class: 'tag lime', text: 'В вишлисте' }) : null,
+              mode === 'view' && collected && item.rating != null
+                ? el('span', { class: 'tag', text: 'Оценка ' + item.rating + '/10' }) : null),
+            dateLine ? el('div', { class: 'added', text: dateLine }) : null)),
+        mode === 'add' ? el('div', { class: 'choice' }, choiceBtns) : null,
+        mode === 'view' ? null : rateBox,
+        mode === 'view' ? null : el('div', { class: 'actions' }, errEl, primary, delBtn, wrongBtn)));
+    sync();
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+    modalEl = overlay;
+    updateBack();
+  }
+
+  function closeModal() {
+    if (!modalEl) return;
+    if (modalEl._cleanup) modalEl._cleanup();            // например, остановить поток камеры
+    modalEl.remove();
+    modalEl = null;
+    document.body.style.overflow = '';
+    updateBack();
+  }
+
+  /* ── экраны: коллекция, вишлист, каталог ── */
+  function goSub(sub) { state.sub = sub; render(); }
+
+  function wishFab(count) {
+    return el('button', { class: 'fab', type: 'button', 'aria-label': 'Вишлист', onclick: () => { haptic(); goSub('wishlist'); } },
+      el('span', { class: 'ico', html: ICONS.bookmark }),
+      el('span', { text: 'Вишлист' }),
+      count > 0 ? el('span', { class: 'cnt', text: String(count) }) : null);
+  }
+
+  function collectionView(d) {
+    const { items, stats } = d;
+    const head = el('div', { class: 'top' },
+      el('div', { class: 'left' },
+        el('div', {},
+          el('h1', { text: 'Моя коллекция' }),
+          el('div', { class: 'sub', text: `Собрано ${stats.tried} из ${stats.total}` }))),
+      el('button', { class: 'pill', text: 'Все вкусы', onclick: () => goSub('catalog') }));
+
+    const fab = wishFab(stats.wishlist || 0);
+
+    if (!items.length) {
+      return el('div', {}, head,
+        el('div', { class: 'empty' },
+          el('div', { class: 'emoji', text: '🥤' }),
+          el('b', { text: 'Пока пусто' }),
+          'Найди вкус через поиск и добавь первую банку.',
+          el('div', {}, el('button', { class: 'pill', text: 'Найти вкус', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
+        fab);
+    }
+    return el('div', { class: 'fab-space' }, head,
+      el('div', { class: 'grid' },
+        items.map((it) => tile(it, {
+          badge: it.rating,
+          onclick: () => openModal(it, { mode: 'manage', category: it.category }),
+        }))),
+      fab);
+  }
+
+  function wishlistView(d) {
+    const head = el('div', { class: 'top' },
+      el('div', { class: 'left' },
+        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: () => goSub('main') }),
+        el('div', {},
+          el('h1', { text: 'Вишлист' }),
+          el('div', { class: 'sub', text: `Хочу попробовать: ${d.count}` }))));
+
+    if (!d.items.length) {
+      return el('div', {}, head,
+        el('div', { class: 'empty' },
+          el('div', { class: 'emoji', text: '🔖' }),
+          el('b', { text: 'Вишлист пуст' }),
+          'Найди вкус через поиск и добавь его сюда, чтобы не забыть попробовать.',
+          el('div', {}, el('button', { class: 'pill', text: 'Найти вкус', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))));
+    }
+    return el('div', {}, head,
+      el('div', { class: 'note', style: 'margin:-6px 2px 14px', text: 'Нажми на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.' }),
+      el('div', { class: 'grid' },
+        d.items.map((it) => tile(it, {
+          onclick: () => openModal(it, { mode: 'wish', category: it.category }),
+        }))));
+  }
+
+  // Каталог — чистый режим просмотра: без оценок, коллекции и вишлиста
+  function catalogView(d) {
+    const total = d.categories.reduce((s, c) => s + c.total, 0);
+    const got = d.categories.reduce((s, c) => s + c.collected, 0);
+    const wish = d.categories.reduce((s, c) => s + (c.wishlisted || 0), 0);
+    const head = el('div', { class: 'top' },
+      el('div', { class: 'left' },
+        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: () => goSub('main') }),
+        el('div', {},
+          el('h1', { text: 'Все вкусы' }),
+          el('div', { class: 'sub', text: `В коллекции ${got} из ${total}` + (wish ? `, в вишлисте ${wish}` : '') }))));
+
+    if (!d.categories.length) {
+      return el('div', {}, head, el('div', { class: 'empty' }, 'Каталог пока пуст.'));
+    }
+    return el('div', {}, head,
+      d.categories.map((cat) =>
+        el('section', { class: 'cat' },
+          el('div', { class: 'cat-head' },
+            el('h2', { text: cat.name }),
+            el('span', { text: `${cat.collected} / ${cat.total}` })),
+          el('div', { class: 'grid' },
+            cat.items.map((it) => tile(it, {
+              off: !it.is_collected,
+              wish: it.in_wishlist && !it.is_collected,
+              badge: it.is_collected ? it.rating : null,
+              onclick: () => openModal(it, { mode: 'view', category: cat.name }),
+            }))))));
+  }
+
+  /* ── добавление по фото ── */
+  // Галерея — скрытый <input type="file" accept="image/*"> без capture. Он постоянно лежит в <body>
+  // и скрыт «визуально» (.vh), а не display:none: часть мобильных WebView игнорирует вызов на
+  // невидимых элементах, а при удалении инпута вместе с модалкой на некоторых Android не
+  // срабатывает change. Камера — встроенная (openLiveCamera), без <input capture>:
+  // Telegram WebView его игнорирует и открывает галерею.
+  const galInput = el('input', { id: 'pick-gal', type: 'file', accept: 'image/*', class: 'vh', tabindex: '-1', 'aria-hidden': 'true' });
+  galInput.addEventListener('change', () => {
+    const f = galInput.files && galInput.files[0];
+    galInput.value = '';                                 // чтобы то же фото можно было выбрать снова
+    if (!f) return;                                      // пользователь закрыл выбор — модалка остаётся
+    if (f.type && !f.type.startsWith('image/')) { toast('Выберите изображение'); return; }
+    handlePhoto(f);
+  });
+  document.body.append(galInput);
+
+  // Встроенная камера через getUserMedia: задняя камера, снимок кадра в JPEG.
+  // Требует разрешения на камеру в клиенте Telegram.
+  // Видоискатель: вертикальная рамка под банку по центру (высота/ширина = 2.53).
+  // Ширина — до 70% ширины экрана, высота — до 80% высоты, чтобы банку было удобно держать в руке.
+  const CAM_FRAME_RATIO = 2.53;                          // банка Monster: 168 мм / 66,5 мм
+  const CAM_CROP_MARGIN = 0;                             // запас вокруг рамки при обрезке (доля от её размера); 0 — строго по рамке
+  function camFrameRect(w, h) {
+    const fw = Math.min(w * 0.7, (h * 0.8) / CAM_FRAME_RATIO);
+    const fh = fw * CAM_FRAME_RATIO;
+    return { x: (w - fw) / 2, y: (h - fh) / 2, w: fw, h: fh };
+  }
+  // Область видео (в пикселях кадра), которая лежит внутри рамки + запас.
+  // video показан через object-fit: cover, поэтому учитываем масштаб и обрезку по краям.
+  function camCropRect(viewW, viewH, vidW, vidH) {
+    const f = camFrameRect(viewW, viewH);
+    const mx = f.w * CAM_CROP_MARGIN, my = f.h * CAM_CROP_MARGIN;
+    const s = Math.max(viewW / vidW, viewH / vidH);      // масштаб cover
+    const ox = (viewW - vidW * s) / 2, oy = (viewH - vidH * s) / 2;
+    const x0 = Math.max(0, (f.x - mx - ox) / s), y0 = Math.max(0, (f.y - my - oy) / s);
+    const x1 = Math.min(vidW, (f.x + f.w + mx - ox) / s), y1 = Math.min(vidH, (f.y + f.h + my - oy) / s);
+    return { sx: Math.round(x0), sy: Math.round(y0), sw: Math.max(1, Math.round(x1 - x0)), sh: Math.max(1, Math.round(y1 - y0)) };
+  }
+
+  const canLiveCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  async function openLiveCamera() {
+    closeModal();
+    haptic();
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } }, audio: false,
+      });
+    } catch (e) {
+      toast(e && e.name === 'NotAllowedError'
+        ? 'Нет доступа к камере. Разрешите её в настройках Telegram'
+        : 'Камера недоступна. Выберите фото из галереи');
+      return;
+    }
+    const video = el('video', { autoplay: '', muted: '', playsinline: '', 'aria-label': 'Камера' });
+    video.muted = true;                                  // нужно для автозапуска на iOS
+    video.srcObject = stream;
+    const frame = el('div', { class: 'cam-frame' });
+    const view = el('div', { class: 'cam-view' }, video, frame,
+      el('div', { class: 'cam-hint', text: 'Поместите банку в рамку' }));
+    const layoutFrame = () => {
+      const r = camFrameRect(view.clientWidth, view.clientHeight);
+      frame.style.left = r.x + 'px'; frame.style.top = r.y + 'px';
+      frame.style.width = r.w + 'px'; frame.style.height = r.h + 'px';
+    };
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(layoutFrame) : null;
+    if (ro) ro.observe(view); else window.addEventListener('resize', layoutFrame);
+    const stop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      if (ro) ro.disconnect(); else window.removeEventListener('resize', layoutFrame);
+    };
+    const shoot = () => {
+      if (!video.videoWidth) return;
+      // вырезаем только то, что внутри рамки (+ небольшой запас), а не весь кадр
+      const c = camCropRect(view.clientWidth, view.clientHeight, video.videoWidth, video.videoHeight);
+      const cv = document.createElement('canvas');
+      cv.width = c.sw; cv.height = c.sh;
+      cv.getContext('2d').drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
+      cv.toBlob((blob) => {
+        if (!blob) { toast('Не удалось сделать снимок'); return; }
+        handlePhoto(new File([blob], 'camera.jpg', { type: 'image/jpeg' }));   // handlePhoto закроет камеру
+      }, 'image/jpeg', 0.9);
+    };
+    const overlay = el('div', { class: 'cam', role: 'dialog', 'aria-modal': 'true' },
+      el('button', { class: 'cam-x', type: 'button', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+      view,
+      el('div', { class: 'cam-bar' },
+        el('button', { class: 'shutter', type: 'button', 'aria-label': 'Сделать снимок', onclick: shoot })));
+    overlay._cleanup = stop;                             // closeModal остановит камеру
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+    modalEl = overlay;
+    updateBack();
+    layoutFrame();
+    video.play().catch(() => {});
+  }
+
+  function openPhotoSheet() {
+    closeModal();
+    haptic();
+    // «Сделать фото» — обычная кнопка: openLiveCamera вызывается прямо из обработчика нажатия
+    // (в жесте пользователя), как того требует запрос разрешения на камеру.
+    // «Выбрать из галереи» — <label for="pick-gal">: нажатие нативно активирует скрытый input
+    // в том же жесте, без программного .click(); для клавиатуры — запасной вызов .click().
+    const gallery = el('label', {
+      class: 'btn' + (canLiveCamera ? ' ghost' : ''), for: 'pick-gal', role: 'button', tabindex: '0',
+      text: canLiveCamera ? 'Выбрать из галереи' : 'Выбрать фото',
+      onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); galInput.click(); } },
+    });
+    const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
+      el('div', { class: 'modal sheet', role: 'dialog', 'aria-modal': 'true' },
+        el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('h3', { class: 'sheet-t', text: 'Добавить по фото' }),
+        el('div', { class: 'actions' },
+          canLiveCamera ? el('button', { class: 'btn', type: 'button', text: 'Сделать фото', onclick: openLiveCamera }) : null,
+          gallery)));
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+    modalEl = overlay;
+    updateBack();
+  }
+
+  // Уменьшаем фото до 1280 px и сохраняем как JPEG: быстрее загрузка, меньше трафик,
+  // и HEIC с iPhone превращается в понятный серверу JPEG. Если не вышло — шлём оригинал.
+  async function prepareImage(file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.round(bmp.width * k));
+      cv.height = Math.max(1, Math.round(bmp.height * k));
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(bmp, 0, 0, cv.width, cv.height);
+      if (bmp.close) bmp.close();
+      const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.85));
+      if (blob) return blob;
+    } catch (e) { /* формат не декодируется в браузере — отправим как есть */ }
+    return file;
+  }
+
+  let scanEl = null;
+  async function handlePhoto(file) {
+    if (scanEl) return;                                  // уже идёт распознавание
+    closeModal();
+    haptic();
+    const ac = new AbortController();
+    let timedOut = false, previewUrl = null;
+    const shot = el('div', { class: 'shot' });
+    scanEl = el('div', { class: 'scan', role: 'status', 'aria-live': 'polite' },
+      shot,
+      el('b', { text: 'Распознаю банку' }),
+      el('div', { class: 'note', text: 'Обычно это занимает несколько секунд' }),
+      el('button', { class: 'pill', type: 'button', text: 'Отмена', onclick: () => ac.abort() }));
+    document.body.append(scanEl);
+    document.body.style.overflow = 'hidden';
+    const finish = () => {
+      if (scanEl) scanEl.remove();
+      scanEl = null;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      document.body.style.overflow = modalEl ? 'hidden' : '';
+    };
+
+    let item;
+    const timer = setTimeout(() => { timedOut = true; ac.abort(); }, 40000);
+    try {
+      const blob = await prepareImage(file);
+      if (ac.signal.aborted) throw new Error('aborted');
+      previewUrl = URL.createObjectURL(blob);
+      shot.append(el('img', { src: previewUrl, alt: '' }));
+      const fd = new FormData();
+      fd.append('file', blob, 'photo.jpg');
+      const res = await api('/api/search-by-photo', { method: 'POST', body: fd, signal: ac.signal });
+      if (res.status !== 'success' || !res.item) {
+        // несколько банок или банка не найдена: показываем подсказку сервера
+        clearTimeout(timer);
+        finish();
+        toast(res.message || 'Не удалось распознать банку');
+        if (res.status === 'not_found') {
+          state.photoFails += 1;
+          if (state.tab === 'search') render({ keepScroll: true });   // показать карточку «Предложить вкус»
+        }
+        return;
+      }
+      item = res.item;
+    } catch (e) {
+      clearTimeout(timer);
+      finish();
+      if (ac.signal.aborted) toast(timedOut ? 'Сервер долго отвечает. Попробуйте ещё раз' : 'Распознавание отменено');
+      else {
+        toast(e.message || 'Не удалось распознать банку');
+        // «неудача» — только когда сервер ответил, что вкус не определён (404); сбои сети/ключа не считаем
+        if (e.status === 404) {
+          state.photoFails += 1;
+          if (state.tab === 'search') render({ keepScroll: true });   // показать карточку «Предложить вкус»
+        }
+      }
+      return;
+    }
+    clearTimeout(timer);
+    finish();
+    hapticOk();
+
+    // закрываем поиск и сразу открываем окно вкуса
+    state.photoFails = 0;
+    state.tab = 'collection'; state.sub = 'main';
+    await render();
+    toast('Нашли: ' + item.title);
+    openModal(item, {
+      category: item.category,
+      mode: item.is_collected ? 'manage' : item.in_wishlist ? 'wish' : 'add',
+      fromPhoto: true,
+    });
+  }
+
+  /* ── экран: поиск ── */
+  // «ё» → «е», без знаков препинания, нижний регистр
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  }
+  // Пока строка поиска пуста, показываем только эти вкусы (в таком порядке).
+  // Сопоставление идёт по названию в каталоге: сначала точное совпадение, затем «содержит».
+  const POPULAR = [
+    'Original Green', 'Ultra White', 'Mango Loco', 'Ultra Strawberry Dreams', 'Ultra Blue',
+    'Zero Sugar', 'Bad Apple', 'Rio Punch', 'Ultra Paradise', 'Pipeline Punch',
+  ];
+  function popularFlavors(all) {
+    const out = [], seen = new Set();
+    for (const name of POPULAR) {
+      const n = norm(name);
+      const it = all.find((x) => x._t === n && !seen.has(x.id)) || all.find((x) => x._t.includes(n) && !seen.has(x.id));
+      if (it) { seen.add(it.id); out.push(it); }
+    }
+    return out.length ? out : all.slice(0, POPULAR.length);   // если названия в каталоге другие — первые 10
+  }
+
+  function searchRow(it, onpick) {
+    const tags = [];
+    if (it.is_collected) tags.push(el('span', { class: 'tag lime', text: 'В коллекции ' + it.rating + '/10' }));
+    else if (it.in_wishlist) tags.push(el('span', { class: 'tag lime', text: 'В вишлисте' }));
+    return el('button', { class: 'row', type: 'button', 'aria-label': it.title, onclick: onpick },
+      el('div', { class: 'th' }, canImg(it.image, it.title)),
+      el('div', { class: 'tx' },
+        el('div', { class: 'nm', text: it.title }),
+        el('div', { class: 'ct', text: it.category }),
+        tags.length ? el('div', { class: 'tags' }, tags) : null));
+  }
+
+  function searchView(d) {
+    // плоский список вкусов + заранее нормализованные строки для быстрого поиска
+    const all = [];
+    for (const c of d.categories) {
+      for (const it of c.items) {
+        all.push({ ...it, category: c.name, _t: norm(it.title), _h: norm([it.title, c.name, it.keywords].join(' ')) });
+      }
+    }
+
+    const input = el('input', {
+      type: 'search', placeholder: 'Название или ключевое слово', autocomplete: 'off',
+      autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', 'aria-label': 'Поиск вкуса',
+    });
+    input.value = state.q;
+    const clr = el('button', { class: 'clr', type: 'button', 'aria-label': 'Очистить', text: '✕',
+      onclick: () => { input.value = ''; update(); input.focus(); } });
+    const meta = el('div', { class: 'res-meta' });
+    const list = el('div', { class: 'rows' });
+
+    function update() {
+      state.q = input.value;
+      clr.hidden = !input.value;
+      const tokens = norm(input.value).split(' ').filter(Boolean);
+      let found = tokens.length ? all : popularFlavors(all);
+      if (tokens.length) {
+        const q = tokens.join(' ');
+        const rank = (it) => (it._t.startsWith(q) ? 0 : it._t.includes(q) ? 1 : 2);
+        found = all.filter((it) => tokens.every((t) => it._h.includes(t))).sort((a, b) => rank(a) - rank(b));
+      }
+      meta.textContent = !all.length ? ''
+        : tokens.length ? `Найдено: ${found.length}`
+        : 'Популярные вкусы';
+
+      if (!all.length) {
+        list.replaceChildren(el('div', { class: 'empty' }, 'Каталог пока пуст.'));
+        return;
+      }
+      if (!found.length) {
+        // первый же ненаход → предлагаем добавить этот вкус в каталог
+        list.replaceChildren(el('div', { class: 'empty' },
+          el('div', { class: 'emoji', text: '🤷' }), el('b', { text: 'Ничего не нашлось' }),
+          'Попробуй другое слово или часть названия. Если такого вкуса нет в каталоге, предложи его нам.',
+          el('div', {}, el('button', { class: 'pill', type: 'button', text: 'Предложить вкус',
+            onclick: () => { input.blur(); openSuggestFlavor({ source: 'text', title: input.value.trim() }); } }))));
+        return;
+      }
+      list.replaceChildren(...found.map((it) => searchRow(it, () => {
+        input.blur();
+        openModal(it, { category: it.category, mode: it.is_collected ? 'manage' : it.in_wishlist ? 'wish' : 'add' });
+      })));
+    }
+    input.addEventListener('input', update);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    update();
+
+    return el('div', {},
+      el('div', { class: 'top' }, el('div', { class: 'left' }, el('div', {},
+        el('h1', { text: 'Поиск' })))),
+      el('div', { class: 'search' },
+        el('span', { class: 'ico si', html: ICONS.search }), input, clr),
+      el('button', { class: 'photo', type: 'button', onclick: openPhotoSheet },
+        el('span', { class: 'ico', html: ICONS.camera }),
+        el('b', { text: 'Добавить по фото' })),
+      state.photoFails >= 1
+        ? el('div', { class: 'sugg' },
+            el('div', { class: 'note', text: 'Не получается распознать банку? Возможно, этого вкуса ещё нет в каталоге.' }),
+            el('button', { class: 'pill', type: 'button', text: 'Предложить вкус', onclick: () => openSuggestFlavor({ source: 'photo' }) }))
+        : null,
+      meta, list);
+  }
+
+  /* ── экран: профиль ── */
+  function tgUser() {
+    const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    return u || { first_name: 'Test', username: 'testuser' };   // запасной вариант вне Telegram
+  }
+
+  function dayKey(d) { return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+
+  function activityCard(items) {
+    // сколько банок добавлено в каждый (локальный) день
+    const perDay = new Map();
+    for (const it of items) {
+      const d = parseUtc(it.added_at);
+      if (d) perDay.set(dayKey(d), (perDay.get(dayKey(d)) || 0) + 1);
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dow = (today.getDay() + 6) % 7;                              // Пн = 0
+    const level = (n) => (n <= 0 ? 0 : n >= 4 ? 4 : n);
+    const monthName = (d) => d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', '');
+    const WD = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    const body = el('div');
+
+    function draw() {
+      const P = PERIODS[periodIdx];
+      const weeks = P.weeks;
+      const startOffset = -(dow + 7 * (weeks - 1));
+      const dayAt = (off) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + startOffset + off);
+
+      const cells = [];
+      for (let w = 0; w < weeks; w++) {
+        for (let d = 0; d < 7; d++) {
+          const date = dayAt(w * 7 + d);
+          if (date > today) { cells.push(el('div', { class: 'cell none' })); continue; }
+          const n = perDay.get(dayKey(date)) || 0;
+          const label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+          cells.push(el('div', {
+            class: 'cell l' + level(n),
+            title: n ? `${label}: ${n} ${plural(n, CANS)}` : `${label}: ничего`,
+            text: P.cal ? String(date.getDate()) : null,
+          }));
+        }
+      }
+
+      let head;
+      if (P.cal) {
+        head = el('div', { class: 'heat-wd' }, WD.map((x) => el('span', { text: x })));
+      } else {
+        // подписи месяцев: ставим над неделей, где месяц сменился; близкие метки отбрасываем
+        const cand = [];
+        for (let w = 0; w < weeks; w++) {
+          const m = dayAt(w * 7).getMonth();
+          if (w === 0 || m !== dayAt((w - 1) * 7).getMonth()) cand.push(w);
+        }
+        const labelWeeks = [];
+        let next = Infinity;
+        for (let i = cand.length - 1; i >= 0; i--) {
+          if (next - cand[i] >= 3) { labelWeeks.unshift(cand[i]); next = cand[i]; }
+        }
+        head = el('div', { class: 'heat-months', style: `--cols:${weeks}` },
+          labelWeeks.map((w) => el('span', { style: `grid-column:${w + 1} / span 3`, text: monthName(dayAt(w * 7)) })));
+      }
+
+      const heat = el('div', {
+        class: 'heat' + (P.cal ? ' cal' : '') + (weeks > 26 ? ' dense' : ''),
+        style: P.cal ? null : `--cols:${weeks}`,
+      }, cells);
+      body.replaceChildren(head, heat);
+    }
+
+    const toggle = el('select', { class: 'per', 'aria-label': 'Период активности' },
+      PERIODS.map((p, i) => el('option', { value: String(i), text: p.label })));
+    toggle.value = String(periodIdx);
+    toggle.addEventListener('change', () => {
+      haptic();
+      periodIdx = Number(toggle.value);
+      draw();
+    });
+    draw();
+
+    return el('section', { class: 'card' },
+      el('div', { class: 'card-title' }, el('h2', { text: 'Активность' }), toggle),
+      body,
+      el('div', { class: 'legend' },
+        el('em', { text: 'Меньше' }),
+        [0, 1, 2, 3, 4].map((l) => el('div', { class: 'cell l' + l })),
+        el('em', { text: 'Больше' })));
+  }
+
+  // Аватарка из Telegram: буква-заглушка лежит под картинкой; фото плавно появляется после загрузки,
+  // а при ошибке (или отсутствии photo_url) остаётся буква.
+  function avatarEl(u, name) {
+    const box = el('div', { class: 'avatar' }, el('span', { text: name.charAt(0).toUpperCase() }));
+    if (u && u.photo_url) {
+      const img = el('img', { alt: '', referrerpolicy: 'no-referrer', decoding: 'async' });
+      img.addEventListener('load', () => img.classList.add('ok'));
+      img.addEventListener('error', () => img.remove());
+      img.src = u.photo_url;
+      box.append(img);
+    }
+    return box;
+  }
+
+  function profileView(col, cat) {
+    const items = col.items;
+    const stats = col.stats;
+    const u = tgUser();
+    const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'Коллекционер';
+    const handle = u.username ? '@' + u.username : '';
+
+    const favs = items.slice()
+      .sort((a, b) => (b.rating - a.rating) || String(b.added_at).localeCompare(String(a.added_at)))
+      .slice(0, 4);
+    const avg = items.length ? items.reduce((s, i) => s + (i.rating || 0), 0) / items.length : 0;
+    const pct = stats.total ? Math.round((stats.tried / stats.total) * 100) : 0;
+
+    const meCard = el('section', { class: 'card' },
+      el('div', { class: 'me' },
+        avatarEl(u, name),
+        el('div', { class: 'who' },
+          el('div', { class: 'nm', text: name }),
+          handle ? el('div', { class: 'hd', text: handle }) : null)));
+
+    const favCard = el('section', { class: 'card' },
+      el('div', { class: 'card-title' }, el('h2', { text: 'Избранное' })),
+      favs.length
+        ? el('div', { class: 'grid four' },
+            favs.map((it) => tile(it, {
+              badge: it.rating,
+              onclick: () => openModal(it, { mode: 'manage', category: it.category }),
+            })))
+        : el('div', { class: 'note', text: 'Оцени первые банки — здесь появится твой топ-4.' }));
+
+    const statCard = el('section', { class: 'card' },
+      el('div', { class: 'card-title' }, el('h2', { text: 'Статистика' })),
+      el('div', { class: 'stats' },
+        el('div', { class: 'stat' }, el('b', { class: 'accent', text: String(stats.tried) }), el('small', { text: 'собрано из ' + stats.total })),
+        el('div', { class: 'stat' }, el('b', { text: avg ? avg.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) : '—' }), el('small', { text: 'средняя оценка' })),
+        el('div', { class: 'stat' }, el('b', { text: pct + '%' }), el('small', { text: 'каталога' }))),
+      cat.categories.length
+        ? el('div', {}, cat.categories.map((c) =>
+            el('div', { class: 'crow' },
+              el('div', { class: 'line' }, el('div', { text: c.name }), el('span', { text: `${c.collected} / ${c.total}` })),
+              el('div', { class: 'bar' }, el('i', { style: `width:${c.total ? Math.round((c.collected / c.total) * 100) : 0}%` })))))
+        : el('div', { class: 'note', text: 'Каталог пока пуст.' }));
+
+    return el('div', {},
+      el('div', { class: 'top' },
+        el('div', { class: 'left' }, el('h1', { text: 'Профиль' })),
+        el('button', { class: 'gear', type: 'button', 'aria-label': 'Настройки', onclick: () => { haptic(); goSub('settings'); } },
+          el('span', { class: 'ico', html: ICONS.gear }))),
+      meCard, favCard, statCard, activityCard(items));
+  }
+
+  /* ── формы: «Предложить вкус» и «Есть идеи по разработке?» ── */
+  // fields: [{ label, multiline, max, min, placeholder, value, required }]
+  function openFormModal({ title, note, fields, submitLabel, okMsg, onSubmit, onDone }) {
+    closeModal();
+    haptic();
+    let busy = false;
+    const errEl = el('div', { class: 'err' });
+    const nodes = fields.map((f) => {
+      const n = el(f.multiline ? 'textarea' : 'input', {
+        class: 'field', maxlength: String(f.max), placeholder: f.placeholder || '', 'aria-label': f.label,
+        rows: f.multiline ? '4' : null, type: f.multiline ? null : 'text', autocomplete: 'off',
+      });
+      n.value = f.value || '';
+      n.addEventListener('input', () => { errEl.textContent = ''; sync(); });
+      return n;
+    });
+    const submit = el('button', { class: 'btn', type: 'button', text: submitLabel, onclick: send });
+    function valid() {
+      return fields.every((f, i) => !f.required || nodes[i].value.trim().length >= (f.min || 1));
+    }
+    function sync() { submit.disabled = busy || !valid(); }
+    async function send() {
+      if (busy || !valid()) return;
+      busy = true; errEl.textContent = ''; sync();
+      try {
+        await onSubmit(nodes.map((n) => n.value.trim()));
+        hapticOk();
+        closeModal();
+        toast(okMsg);
+        if (onDone) onDone();
+      } catch (e) {
+        busy = false;
+        errEl.textContent = '⚠️ ' + (e.message || 'Не удалось отправить');
+        sync();
+      }
+    }
+    const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
+      el('div', { class: 'modal sheet', role: 'dialog', 'aria-modal': 'true' },
+        el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('h3', { class: 'sheet-t', text: title }),
+        note ? el('div', { class: 'm-note', text: note }) : null,
+        fields.map((f, i) => el('div', { class: 'f' }, el('div', { class: 'f-label', text: f.label }), nodes[i])),
+        el('div', { class: 'actions' }, errEl, submit)));
+    sync();
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+    modalEl = overlay;
+    updateBack();
+  }
+
+  function openSuggestFlavor({ source, title = '', wrong = false }) {
+    openFormModal({
+      title: 'Предложить вкус',
+      note: source === 'photo'
+        ? (wrong ? 'Похоже, мы ошиблись. Напиши, какой это вкус, и мы добавим его в каталог.'
+                 : 'Не удалось распознать банку по фото. Напиши, какой это вкус, и мы добавим его в каталог.')
+        : 'Напиши название вкуса, которого нет в каталоге, и мы добавим его.',
+      fields: [
+        { label: 'Название вкуса', max: 100, min: 2, required: true, value: title, placeholder: 'Например: Monster Ultra Gold' },
+        { label: 'Комментарий (необязательно)', multiline: true, max: 500, placeholder: 'Цвет банки, страна, где нашёл…' },
+      ],
+      submitLabel: 'Отправить',
+      okMsg: 'Спасибо! Предложение отправлено',
+      onSubmit: ([name, comment]) => api('/api/suggestions/flavor', { method: 'POST', body: { title: name, comment, source } }),
+      onDone: () => {
+        if (source === 'photo') {
+          state.photoFails = 0;
+          if (state.tab === 'search') render({ keepScroll: true });   // прячем карточку «Предложить вкус»
+        }
+      },
+    });
+  }
+
+  function openDevIdea() {
+    openFormModal({
+      title: '💡 Есть идеи по разработке?',
+      note: 'Расскажи, что улучшить или добавить в приложение. Сообщение получит разработчик.',
+      fields: [{ label: 'Ваша идея или отзыв', multiline: true, max: 1000, min: 5, required: true, placeholder: 'Например: добавить статистику по месяцам' }],
+      submitLabel: 'Отправить',
+      okMsg: 'Спасибо! Идея отправлена',
+      onSubmit: ([text]) => api('/api/suggestions/dev', { method: 'POST', body: { text } }),
+    });
+  }
+
+  /* ── экран: настройки (в «Профиле») ── */
+  function goBack() {
+    state.sub = (state.tab === 'profile' && state.sub === 'admin') ? 'settings' : 'main';
+    render();
+  }
+
+  function settingRow(icon, title, subtitle, onclick, count) {
+    return el('button', { class: 'srow', type: 'button', onclick },
+      el('span', { text: icon, 'aria-hidden': 'true' }),
+      el('div', { class: 'st' }, el('b', { text: title }), subtitle ? el('small', { text: subtitle }) : null),
+      count > 0 ? el('span', { class: 'cnt', text: String(count) }) : null,
+      el('span', { class: 'chev', text: '›', 'aria-hidden': 'true' }));
+  }
+
+  // Заглушка-переключатель: выбранное значение не меняется, остальные показывают «скоро»
+  function stubSegment(values, current, msg) {
+    return el('div', { class: 'seg' }, values.map((v) =>
+      el('button', {
+        type: 'button', class: v.id === current ? 'sel' : '', text: v.label,
+        onclick: () => { haptic(); if (v.id !== current) toast(msg); },
+      })));
+  }
+
+  function settingsView(me) {
+    const pend = me.pending || { flavors: 0, dev: 0 };
+    return el('div', {},
+      el('div', { class: 'top' }, el('div', { class: 'left' },
+        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: goBack }),
+        el('h1', { text: 'Настройки' }))),
+      me.is_admin
+        ? settingRow('🛠️', 'Админ-панель', 'Предложения вкусов и идеи', () => { haptic(); goSub('admin'); }, pend.flavors + pend.dev)
+        : null,
+      settingRow('💡', 'Есть идеи по разработке?', 'Отправить идею или отзыв разработчику', openDevIdea),
+      el('section', { class: 'card' },
+        el('div', { class: 'card-title' }, el('h2', { text: 'Язык' }), el('span', { class: 'soon', text: 'скоро' })),
+        stubSegment([{ id: 'ru', label: 'RU' }, { id: 'en', label: 'EN' }, { id: 'uk', label: 'UK' }], 'ru', 'Смена языка скоро появится')),
+      el('section', { class: 'card' },
+        el('div', { class: 'card-title' }, el('h2', { text: 'Тема оформления' }), el('span', { class: 'soon', text: 'скоро' })),
+        stubSegment([{ id: 'dark', label: 'Тёмная' }, { id: 'light', label: 'Светлая' }], 'dark', 'Светлая тема скоро появится')));
+  }
+
+  /* ── экран: админ-панель ── */
+  function adminSection(title, items, kind) {
+    const card = el('section', { class: 'card' },
+      el('div', { class: 'card-title' }, el('h2', { text: title }), el('span', { text: 'активных: ' + items.length })));
+    if (!items.length) {
+      card.append(el('div', { class: 'note', text: 'Пока ничего нет.' }));
+      return card;
+    }
+    items.forEach((it, i) => {                           // номер = позиция в списке, после закрытия задачи нумерация сдвигается
+      const btn = el('button', { class: 'btn sm', type: 'button', text: 'Выполнено' });
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await api(`/api/admin/suggestions/${kind}/${it.id}/done`, { method: 'POST' });
+          hapticOk();
+          toast('Задача закрыта');
+          render({ keepScroll: true });
+        } catch (e) {
+          btn.disabled = false;
+          toast(e.message || 'Не удалось закрыть задачу');
+        }
+      });
+      const d = parseUtc(it.created_at);
+      card.append(el('div', { class: 'task' },
+        el('div', { class: 't-head' },
+          el('b', { text: '#' + (i + 1) }),
+          kind === 'flavor' ? el('span', { class: 'tag', text: it.source === 'photo' ? 'по фото' : 'из поиска' }) : null,
+          el('span', { class: 't-meta', text: 'ID ' + it.user_id + (d ? ', ' + fmtDate(it.created_at) : '') })),
+        el('div', { class: 't-body', text: kind === 'flavor' ? it.title : it.text }),
+        kind === 'flavor' && it.comment ? el('div', { class: 'note', text: it.comment }) : null,
+        btn));
+    });
+    return card;
+  }
+
+  function adminView(d) {
+    return el('div', {},
+      el('div', { class: 'top' }, el('div', { class: 'left' },
+        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: goBack }),
+        el('div', {},
+          el('h1', { text: 'Админ-панель' }),
+          el('div', { class: 'sub', text: `Вкусов: ${d.flavors.length}, идей: ${d.dev.length}` })))),
+      adminSection('Предложения вкусов', d.flavors, 'flavor'),
+      adminSection('Идеи по разработке', d.dev, 'dev'));
+  }
+
+  function errorView(err) {
+    return el('div', { class: 'empty' },
+      el('div', { class: 'emoji', text: '⚠️' }),
+      el('b', { text: 'Не удалось загрузить' }),
+      err.message || 'Что-то пошло не так.',
+      el('div', {}, el('button', { class: 'pill', text: 'Повторить', onclick: () => render() })));
+  }
+
+  /* ── навигация ── */
+  function updateNav() {
+    nav.replaceChildren(...TABS.map((t) =>
+      el('button', {
+        class: t.id === state.tab ? 'active' : '',
+        onclick: () => { haptic(); state.tab = t.id; state.sub = 'main'; render(); },
+      }, el('span', { html: ICONS[t.id] }), el('span', { text: t.label }))));
+  }
+
+  // Кнопка «назад» Telegram: закрывает окно или возвращает из каталога в коллекцию
+  function updateBack() {
+    if (!tg || !tg.BackButton) return;
+    const needed = !!modalEl || state.sub !== 'main';
+    needed ? tg.BackButton.show() : tg.BackButton.hide();
+  }
+  if (tg && tg.BackButton) {
+    tg.BackButton.onClick(() => {
+      if (modalEl) closeModal();
+      else if (state.sub !== 'main') goBack();
+    });
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+  // opts.keepScroll — перерисовать экран после изменения данных, не сбрасывая прокрутку
+  async function render(opts) {
+    const keep = !!(opts && opts.keepScroll);
+    const my = ++renderSeq;           // защита от «гонки» при быстром переключении экранов
+    const y = keep ? window.scrollY : 0;
+    closeModal();
+    updateNav();
+    updateBack();
+    if (!keep) window.scrollTo(0, 0);
+
+    if (!keep) main.replaceChildren(skeleton());
+    try {
+      let view;
+      if (state.tab === 'profile' && state.sub === 'settings') {
+        view = settingsView(await api('/api/me'));
+      } else if (state.tab === 'profile' && state.sub === 'admin') {
+        view = adminView(await api('/api/admin/suggestions'));
+      } else if (state.tab === 'profile') {
+        const [col, cat] = await Promise.all([api('/api/collection'), api('/api/catalog')]);
+        view = profileView(col, cat);
+      } else if (state.tab === 'search') {
+        view = searchView(await api('/api/catalog'));
+      } else if (state.sub === 'catalog') {
+        view = catalogView(await api('/api/catalog'));
+      } else if (state.sub === 'wishlist') {
+        view = wishlistView(await api('/api/wishlist'));
+      } else {
+        view = collectionView(await api('/api/collection'));
+      }
+      if (my !== renderSeq) return;
+      main.replaceChildren(view);
+      if (keep) window.scrollTo(0, y);
+    } catch (err) {
+      if (my !== renderSeq) return;
+      main.replaceChildren(errorView(err));
+    }
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
