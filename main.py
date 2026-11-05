@@ -292,7 +292,13 @@ def image_url(flavor_id: int) -> str | None:
 
 @app.get("/", include_in_schema=False)
 def index():
-    return {"status": "ok", "message": "Railway works!"}
+    # Проверяем корень проекта и папку static
+    for path in (BASE_DIR / "index.html", BASE_DIR / "static" / "index.html"):
+        if path.is_file():
+            return FileResponse(path, headers={"Cache-Control": "no-cache"})
+    
+    # Ошибка вызывается ТОЛЬКО если файл не найден ни в одном из мест
+    raise HTTPException(status_code=404, detail="index.html не найден")
 
 
 # ── Коллекция ──
