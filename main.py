@@ -292,10 +292,7 @@ def image_url(flavor_id: int) -> str | None:
 
 @app.get("/", include_in_schema=False)
 def index():
-    for path in (BASE_DIR / "index.html", STATIC_DIR / "index.html"):
-        if path.is_file():
-            return FileResponse(path, headers={"Cache-Control": "no-cache"})
-    raise HTTPException(404, "index.html не найден")
+    return {"status": "ok", "message": "Railway works!"}
 
 
 # ── Коллекция ──
