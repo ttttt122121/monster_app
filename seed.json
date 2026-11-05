@@ -1,0 +1,117 @@
+{
+  "categories": [
+    {
+      "name": "Original",
+      "flavors": [
+        { "id": 1, "title": "Monster Original Green" },
+        { "id": 2, "title": "Monster Zero Sugar" },
+        { "id": 3, "title": "Monster Vanilla Shot" },
+        { "id": 4, "title": "Monster Zero Sugar Vanilla Shot" },
+        { "id": 6, "title": "Monster Energy Strawberry Shot" },
+        { "id": 7, "title": "Monster Energy Zero Sugar Strawberry Shot" },
+        { "id": 8, "title": "Monster Energy Electric Blue" },
+        { "id": 9, "title": "Monster Energy Orange Dreamsicle" },
+        { "id": 10, "title": "Monster Energy Lo-Carb" },
+        { "id": 14, "title": "Monster Super-Premium Import" }
+      ]
+    },
+    {
+      "name": "Collabs",
+      "flavors": [
+        { "id": 5, "title": "Monster Lando Norris" },
+        { "id": 15, "title": "Monster Full Throttle Zero Sugar" },
+        { "id": 50, "title": "Monster VR46 The Doctor" },
+        { "id": 53, "title": "Monster VR46 Zero Sugar" },
+        { "id": 70, "title": "Monster Lewis Hamilton LH44" }
+      ]
+    },
+    {
+      "name": "Reserve",
+      "flavors": [
+        { "id": 11, "title": "Monster Reserve Orange Dreamsicle" },
+        { "id": 12, "title": "Monster Reserve Peaches n’ Crème" },
+        { "id": 71, "title": "Monster Drink Reserve Kiwi Strawberry" },
+        { "id": 72, "title": "Monster Reserve Watermelon" },
+        { "id": 73, "title": "Monster Reserve White Pineapple" }
+      ]
+    },
+    {
+      "name": "Nitro",
+      "flavors": [
+        { "id": 13, "title": "Monster Nitro Super Dry" },
+        { "id": 67, "title": "Monster Nitro Cosmic Peach" },
+        { "id": 68, "title": "Monster Nitro blue flash" }
+      ]
+    },
+    {
+      "name": "Juice",
+      "flavors": [
+        { "id": 16, "title": "Juiced Monster Mango Loco" },
+        { "id": 17, "title": "Juiced Monster Voodoo Grape" },
+        { "id": 18, "title": "Juiced Monster Strawberry Lemonade" },
+        { "id": 19, "title": "Juiced Monster Pacific Punch" },
+        { "id": 20, "title": "Juiced Monster Viking Berry" },
+        { "id": 21, "title": "Juiced Monster Bad Apple" },
+        { "id": 22, "title": "Juiced Monster Rio Punch" },
+        { "id": 23, "title": "Juiced Monster Pipeline Punch" },
+        { "id": 54, "title": "Juiced Monster Monarch" },
+        { "id": 55, "title": "Juiced Monster Khaos" },
+        { "id": 56, "title": "Juiced Monster Khaotic" },
+        { "id": 57, "title": "Juiced Monster Mixxd Punch" },
+        { "id": 58, "title": "Juiced Monster Ripper" },
+        { "id": 69, "title": "Juiced Monster Aussie Lemonade" }
+      ]
+    },
+    {
+      "name": "Ultra",
+      "flavors": [
+        { "id": 24, "title": "Monster Ultra White Monster" },
+        { "id": 25, "title": "Monster Ultra Red White Blue Razz" },
+        { "id": 26, "title": "Monster Ultra Punk Punch" },
+        { "id": 27, "title": "Monster Ultra Blue Hawaiian" },
+        { "id": 28, "title": "Monster Ultra Vice Guava" },
+        { "id": 29, "title": "Monster Ultra Wild Passion" },
+        { "id": 30, "title": "Monster Ultra Strawberry Dreams" },
+        { "id": 31, "title": "Monster Ultra Sunrise" },
+        { "id": 32, "title": "Monster Ultra Violet" },
+        { "id": 33, "title": "Monster Ultra Peachy Keen" },
+        { "id": 34, "title": "Monster Ultra Fantasy Ruby Red" },
+        { "id": 35, "title": "Monster Ultra Paradise" },
+        { "id": 36, "title": "Monster Ultra Fiesta Mango" },
+        { "id": 37, "title": "Monster Ultra Watermelon" },
+        { "id": 38, "title": "Monster Ultra Rosá" },
+        { "id": 39, "title": "Monster Ultra Red" },
+        { "id": 40, "title": "Monster Ultra Blue" },
+        { "id": 41, "title": "Monster Ultra Black" },
+        { "id": 51, "title": "Monster Ultra Citron" },
+        { "id": 52, "title": "Monster Ultra Golden Pineapple" }
+      ]
+    },
+    {
+      "name": "Rehab",
+      "flavors": [
+        { "id": 42, "title": "Rehab Monster Tea + Lemonade" },
+        { "id": 43, "title": "Rehab Monster Peach Tea" },
+        { "id": 44, "title": "Rehab Monster Wild Berry Tea" },
+        { "id": 45, "title": "Rehab Monster Green Tea" },
+        { "id": 59, "title": "Rehab Monster Pink Lemonade" },
+        { "id": 60, "title": "Rehab Monster Protean" },
+        { "id": 61, "title": "Rehab Monster Raspberry Tea" },
+        { "id": 62, "title": "Rehab Monster Rojo Tea" },
+        { "id": 63, "title": "Rehab Monster Strawberry Lemonade" },
+        { "id": 64, "title": "Rehab Monster Tea Orangeade" },
+        { "id": 65, "title": "Rehab Monster Tea Watermelon" },
+        { "id": 66, "title": "Rehab Monster White Dragon Tea" }
+      ]
+    },
+    {
+      "name": "Java",
+      "flavors": [
+        { "id": 46, "title": "Java Monster Dubai Chocolate" },
+        { "id": 47, "title": "Java Monster Mean Bean" },
+        { "id": 48, "title": "Java Monster Loca Moca" },
+        { "id": 49, "title": "Java Monster Salted Caramel" }
+      ]
+    }
+  ]
+}
