@@ -284,6 +284,12 @@ label.btn:active { opacity: .8; }
 .shutter { width: 68px; height: 68px; border-radius: 50%; background: var(--accent); border: 4px solid var(--bg);
   box-shadow: 0 0 0 3px var(--accent); transition: transform .1s; }
 .shutter:active { transform: scale(.92); }
+.shutter:disabled { opacity: .6; }
+/* визуальный отклик затвора: короткая вспышка видоискателя */
+.cam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 2; }
+.cam-flash.go { animation: shutterFlash .22s ease-out; }
+@keyframes shutterFlash { 0% { opacity: .75; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cam-flash.go { animation-duration: .01s; } }
 .modal.sheet { max-width: 380px; gap: 12px; }
 .modal .sheet-t { font-size: 18px; margin-right: 32px; }
 .scan { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center;
@@ -869,23 +875,45 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       stream.getTracks().forEach((t) => t.stop());
       if (ro) ro.disconnect(); else window.removeEventListener('resize', layoutFrame);
     };
+    const flash = el('div', { class: 'cam-flash', 'aria-hidden': 'true' });
+    view.append(flash);
+    let shooting = false;
+    const shutterBtn = el('button', { class: 'shutter', type: 'button', 'aria-label': 'Сделать снимок', onclick: () => shoot() });
+    const resetShot = () => {
+      shooting = false;
+      shutterBtn.disabled = false;
+      video.play().catch(() => {});
+    };
     const shoot = () => {
-      if (!video.videoWidth) return;
-      // вырезаем только то, что внутри рамки (+ небольшой запас), а не весь кадр
+      if (shooting || !video.videoWidth) return;
+      shooting = true;
+      shutterBtn.disabled = true;
+      haptic();
+      // область кадра считаем сразу, в момент нажатия
       const c = camCropRect(view.clientWidth, view.clientHeight, video.videoWidth, video.videoHeight);
-      const cv = document.createElement('canvas');
-      cv.width = c.sw; cv.height = c.sh;
-      cv.getContext('2d').drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
-      cv.toBlob((blob) => {
-        if (!blob) { toast('Не удалось сделать снимок'); return; }
-        handlePhoto(new File([blob], 'camera.jpg', { type: 'image/jpeg' }));   // handlePhoto закроет камеру
-      }, 'image/jpeg', 0.9);
+      video.pause();                                     // «замораживаем» кадр, чтобы он не менялся во время обработки
+      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');   // вспышка затвора
+      // Тяжёлую часть (отрисовка + кодирование в JPEG) выносим в requestAnimationFrame:
+      // первый кадр успевает показать вспышку, а UI не подвисает.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        try {
+          const cv = document.createElement('canvas');
+          cv.width = c.sw; cv.height = c.sh;
+          cv.getContext('2d').drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
+          cv.toBlob((blob) => {
+            if (!blob) { toast('Не удалось сделать снимок'); resetShot(); return; }
+            handlePhoto(new File([blob], 'camera.jpg', { type: 'image/jpeg' }));   // handlePhoto закроет камеру
+          }, 'image/jpeg', 0.9);
+        } catch (e) {
+          toast('Не удалось сделать снимок');
+          resetShot();
+        }
+      }));
     };
     const overlay = el('div', { class: 'cam', role: 'dialog', 'aria-modal': 'true' },
       el('button', { class: 'cam-x', type: 'button', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
       view,
-      el('div', { class: 'cam-bar' },
-        el('button', { class: 'shutter', type: 'button', 'aria-label': 'Сделать снимок', onclick: shoot })));
+      el('div', { class: 'cam-bar' }, shutterBtn));
     overlay._cleanup = stop;                             // closeModal остановит камеру
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';

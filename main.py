@@ -58,7 +58,8 @@ except ImportError:                        # pragma: no cover
     Image = ImageOps = None
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "app.db"
+# Если задана переменная окружения DB_PATH (например, на Railway), используем её, иначе — локальный файл
+DB_PATH = Path(os.getenv("DB_PATH", BASE_DIR / "app.db"))
 STATIC_DIR = BASE_DIR / "static"
 IMAGES_DIR = STATIC_DIR / "images"
 SEED_PATH = BASE_DIR / "seed.json"
@@ -80,7 +81,7 @@ PHOTO_MAX_SIDE = 1300                    # длинная сторона фот�
 PHOTO_JPEG_QUALITY = 85
 PHOTO_MAX_PIXELS = 60_000_000             # защита от «бомб» распаковки
 PHOTO_DETAIL = "original"                 # исходное разрешение: без принудительного сжатия до low
-PHOTO_MIN_CONFIDENCE = 0.5                # ниже — считаем, что не распознали
+PHOTO_MIN_CONFIDENCE = 0.38               # ниже — считаем, что не распознали
 PHOTO_RATE = (10, 60)                     # не больше 10 фото за 60 секунд на пользователя
 
 log = logging.getLogger("flavors")
@@ -613,6 +614,10 @@ def prepare_photo(image: bytes, mime: str) -> tuple[bytes, str]:
             if im.format == "JPEG":
                 im.draft("RGB", (PHOTO_MAX_SIDE * 2, PHOTO_MAX_SIDE * 2))   # быстрое грубое декодирование огромных JPEG
             im = ImageOps.exif_transpose(im)                                # учесть поворот с телефона
+            try:                                                            # мягкое выравнивание яркости/теней (HDR Pixel и т.п.)
+                im = ImageOps.autocontrast(im, cutoff=2)
+            except Exception:
+                pass
             if max(im.size) > PHOTO_MAX_SIDE:
                 im.thumbnail((PHOTO_MAX_SIDE, PHOTO_MAX_SIDE), Image.LANCZOS)  # пропорционально
             if im.mode in ("RGBA", "LA", "P"):                              # прозрачность → белый фон
