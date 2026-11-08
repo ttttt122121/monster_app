@@ -264,12 +264,6 @@ nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-wi
 .m-note { color: var(--muted); font-size: 13px; line-height: 1.4; }
 
 /* ───────── v3: добавление по фото ───────── */
-/* визуально скрытый input: остаётся «видимым» для системы, но не для глаз */
-.vh { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; overflow: hidden;
-  pointer-events: none; z-index: -1; }
-label.btn { display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none;
-  -webkit-user-select: none; }
-label.btn:active { opacity: .8; }
 .cam { position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column; background: #000; animation: fade .15s ease; }
 .cam-view { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #000; }
 .cam-view video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
@@ -292,6 +286,12 @@ label.btn:active { opacity: .8; }
 @media (prefers-reduced-motion: reduce) { .cam-flash.go { animation-duration: .01s; } }
 .modal.sheet { max-width: 380px; gap: 12px; }
 .modal .sheet-t { font-size: 18px; margin-right: 32px; }
+/* окно с инструкцией перед съёмкой */
+.modal.instr .sheet-t { color: #FFFFFF; line-height: 1.25; }
+.instr-pic { display: flex; align-items: center; justify-content: center; overflow: hidden;
+  background: #191a1c; border-radius: 16px; max-height: 46vh; }
+.instr-pic img { display: block; width: 100%; height: auto; max-height: 46vh; object-fit: contain; background: #191a1c; }
+.instr-pic .ph { padding: 28px 0; }
 .scan { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 14px; padding: 24px; text-align: center;
   background: rgba(20,20,20,.95); backdrop-filter: blur(6px); animation: fade .15s ease; }
@@ -767,7 +767,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
           el('div', {}, el('button', { class: 'pill', text: 'Найти вкус', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))));
     }
     return el('div', {}, head,
-      el('div', { class: 'note', style: 'margin:-6px 2px 14px', text: 'Нажми на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.' }),
+      el('div', { class: 'note', style: 'margin:-6px 2px 14px', text: 'Нажмите на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.' }),
       el('div', { class: 'grid' },
         d.items.map((it) => tile(it, {
           onclick: () => openModal(it, { mode: 'wish', category: it.category }),
@@ -805,20 +805,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   }
 
   /* ── добавление по фото ── */
-  // Галерея — скрытый <input type="file" accept="image/*"> без capture. Он постоянно лежит в <body>
-  // и скрыт «визуально» (.vh), а не display:none: часть мобильных WebView игнорирует вызов на
-  // невидимых элементах, а при удалении инпута вместе с модалкой на некоторых Android не
-  // срабатывает change. Камера — встроенная (openLiveCamera), без <input capture>:
-  // Telegram WebView его игнорирует и открывает галерею.
-  const galInput = el('input', { id: 'pick-gal', type: 'file', accept: 'image/*', class: 'vh', tabindex: '-1', 'aria-hidden': 'true' });
-  galInput.addEventListener('change', () => {
-    const f = galInput.files && galInput.files[0];
-    galInput.value = '';                                 // чтобы то же фото можно было выбрать снова
-    if (!f) return;                                      // пользователь закрыл выбор — модалка остаётся
-    if (f.type && !f.type.startsWith('image/')) { toast('Выберите изображение'); return; }
-    handlePhoto(f);
-  });
-  document.body.append(galInput);
+  // Только прямая съёмка: встроенная камера (openLiveCamera) через getUserMedia.
+  // Выбор файлов из галереи отключён.
 
   // Встроенная камера через getUserMedia: задняя камера, снимок кадра в JPEG.
   // Требует разрешения на камеру в клиенте Telegram.
@@ -855,7 +843,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     } catch (e) {
       toast(e && e.name === 'NotAllowedError'
         ? 'Нет доступа к камере. Разрешите её в настройках Telegram'
-        : 'Камера недоступна. Выберите фото из галереи');
+        : 'Камера недоступна на этом устройстве');
       return;
     }
     const video = el('video', { autoplay: '', muted: '', playsinline: '', 'aria-label': 'Камера' });
@@ -923,25 +911,22 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     video.play().catch(() => {});
   }
 
+  // Окно с инструкцией. openLiveCamera вызывается прямо из обработчика нажатия
+  // (в жесте пользователя), как того требует запрос разрешения на камеру.
   function openPhotoSheet() {
     closeModal();
     haptic();
-    // «Сделать фото» — обычная кнопка: openLiveCamera вызывается прямо из обработчика нажатия
-    // (в жесте пользователя), как того требует запрос разрешения на камеру.
-    // «Выбрать из галереи» — <label for="pick-gal">: нажатие нативно активирует скрытый input
-    // в том же жесте, без программного .click(); для клавиатуры — запасной вызов .click().
-    const gallery = el('label', {
-      class: 'btn' + (canLiveCamera ? ' ghost' : ''), for: 'pick-gal', role: 'button', tabindex: '0',
-      text: canLiveCamera ? 'Выбрать из галереи' : 'Выбрать фото',
-      onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); galInput.click(); } },
-    });
+    const go = el('button', { class: 'btn', type: 'button', text: 'Сделать фото',
+      onclick: () => {
+        if (!canLiveCamera) { toast('Камера недоступна на этом устройстве'); return; }
+        openLiveCamera();
+      } });
     const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
-      el('div', { class: 'modal sheet', role: 'dialog', 'aria-modal': 'true' },
+      el('div', { class: 'modal sheet instr', role: 'dialog', 'aria-modal': 'true' },
         el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
-        el('h3', { class: 'sheet-t', text: 'Добавить по фото' }),
-        el('div', { class: 'actions' },
-          canLiveCamera ? el('button', { class: 'btn', type: 'button', text: 'Сделать фото', onclick: openLiveCamera }) : null,
-          gallery)));
+        el('h3', { class: 'sheet-t', text: 'Сфотографируйте переднюю часть банки' }),
+        el('div', { class: 'instr-pic' }, canImg('/static/images/instruction.png', 'Как сфотографировать банку')),
+        el('div', { class: 'actions' }, go)));
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';
     modalEl = overlay;
@@ -1117,7 +1102,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         // первый же ненаход → предлагаем добавить этот вкус в каталог
         list.replaceChildren(el('div', { class: 'empty' },
           el('div', { class: 'emoji', text: '🤷' }), el('b', { text: 'Ничего не нашлось' }),
-          'Попробуй другое слово или часть названия. Если такого вкуса нет в каталоге, предложи его нам.',
+          'Попробуйте другое слово или часть названия. Если такого вкуса нет в каталоге, предложите и мы его добавим',
           el('div', {}, el('button', { class: 'pill', type: 'button', text: 'Предложить вкус',
             onclick: () => { input.blur(); openSuggestFlavor({ source: 'text', title: input.value.trim() }); } }))));
         return;
@@ -1357,9 +1342,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     openFormModal({
       title: 'Предложить вкус',
       note: source === 'photo'
-        ? (wrong ? 'Похоже, мы ошиблись. Напиши, какой это вкус, и мы добавим его в каталог.'
-                 : 'Не удалось распознать банку по фото. Напиши, какой это вкус, и мы добавим его в каталог.')
-        : 'Напиши название вкуса, которого нет в каталоге, и мы добавим его.',
+        ? (wrong ? 'Похоже, мы ошиблись. Напишите, какой это вкус, и мы добавим его в каталог.'
+                 : 'Похоже этого вкуса ещё нету. Напишите, какой это вкус, и мы добавим его в каталог.')
+        : 'Напишите название вкуса, которого нет в каталоге, и мы добавим его.',
       fields: [
         { label: 'Название вкуса', max: 100, min: 2, required: true, value: title, placeholder: 'Например: Monster Ultra Gold' },
         { label: 'Комментарий (необязательно)', multiline: true, max: 500, placeholder: 'Цвет банки, страна, где нашёл…' },
@@ -1378,9 +1363,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function openDevIdea() {
     openFormModal({
-      title: '💡 Есть идеи по разработке?',
-      note: 'Расскажи, что улучшить или добавить в приложение. Сообщение получит разработчик.',
-      fields: [{ label: 'Ваша идея или отзыв', multiline: true, max: 1000, min: 5, required: true, placeholder: 'Например: добавить статистику по месяцам' }],
+      title: 'Есть идеи по разработке?',
+      note: 'Расскажите, что улучшить или добавить в приложение.',
+      fields: [{ label: 'Ваша идея или отзыв', multiline: true, max: 1000, min: 5, required: true }],
       submitLabel: 'Отправить',
       okMsg: 'Спасибо! Идея отправлена',
       onSubmit: ([text]) => api('/api/suggestions/dev', { method: 'POST', body: { text } }),

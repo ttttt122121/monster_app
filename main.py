@@ -1,5 +1,6 @@
 """
 Коллекционер вкусов — автономное FastAPI-приложение (Monster Energy).
+
 Запуск (из корня проекта):
     export BOT_TOKEN="123456:ABC..."        # токен бота, который открывает Mini App
     uvicorn web_app.main:app --host 0.0.0.0 --port 8000
