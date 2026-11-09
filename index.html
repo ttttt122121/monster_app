@@ -106,11 +106,19 @@ nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-wi
 .rate-box { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
 .rate-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
 .rate-val { color: var(--accent); font-size: 20px; font-weight: 800; }
-.rate { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.rate button { height: 42px; border: 1px solid var(--line); background: var(--bg); border-radius: 10px;
-  font-weight: 700; font-size: 16px; transition: background .12s, color .12s, border-color .12s; }
-.rate button:active { border-color: var(--accent); }
-.rate button.sel { background: var(--accent); color: #000; border-color: var(--accent); }
+/* шкала оценки: 10 банок, накопительная подсветка 1..N */
+.rate { display: flex; gap: 2px; }
+.rate button { flex: 1 1 0; min-width: 0; padding: 4px 0 2px; display: flex; flex-direction: column; align-items: center;
+  gap: 3px; background: none; border: 0; border-radius: 10px; color: var(--muted); font-weight: 700; font-size: 13px;
+  line-height: 1; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: color .12s, transform .12s; }
+.rate button:active { transform: scale(.92); }
+.rate .can-ico { width: 100%; max-width: 24px; height: auto; aspect-ratio: 30 / 68; display: block; overflow: visible; }
+.rate .can-ico path, .rate .can-ico rect { fill: #2A2A2A; transition: fill .12s; }
+.rate button.on .can-ico path, .rate button.on .can-ico rect { fill: var(--c, #A6FF00); }
+.rate button.on { color: var(--c, var(--accent)); }
+.rate button.sel { color: #fff; }
+.modal [hidden] { display: none !important; }
 .err { color: var(--text); font-size: 13px; text-align: center; min-height: 0; }
 .err:empty { display: none; }
 
@@ -341,6 +349,27 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 .t-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .t-head b { color: var(--accent); font-size: 15px; }
 .t-meta { color: var(--muted); font-size: 12px; }
+/* вложение фото в формах */
+.vh { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; z-index: -1; }
+.attach { display: flex; flex-direction: column; gap: 8px; }
+.attach-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px;
+  border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-weight: 600; font-size: 14px;
+  cursor: pointer; user-select: none; -webkit-user-select: none; text-align: center; }
+.attach-btn:active { border-color: var(--accent); color: var(--accent); }
+.attach-prev { position: relative; align-self: flex-start; }
+.attach-prev img { display: block; width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+.attach-prev button { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%;
+  background: #000; color: #fff; border: 1px solid var(--line); font-size: 13px; line-height: 1; }
+/* фото в админ-панели и просмотр на весь экран */
+.t-thumb { width: 120px; height: 120px; padding: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
+  background: var(--bg); display: flex; align-items: center; justify-content: center; align-self: flex-start; cursor: zoom-in; }
+.t-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lb { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.94); display: flex; align-items: center;
+  justify-content: center; padding: 16px; animation: fade .15s ease; cursor: zoom-out; }
+.lb img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.lb .lb-x { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 12px; width: 36px; height: 36px;
+  color: #fff; font-size: 22px; }
+.lb .lb-load { color: var(--muted); }
 .t-body { font-size: 15px; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
 .btn.sm { height: 38px; font-size: 14px; }
 </style>
@@ -448,6 +477,16 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     return d ? d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
   }
 
+  // «15 ноября 2026, 14:32» — точные дата и время в часовом поясе пользователя
+  function fmtDateTime(s) {
+    const d = parseUtc(s);
+    if (!d) return '—';
+    const parts = {};
+    new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+      .formatToParts(d).forEach((x) => { parts[x.type] = x.value; });
+    return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute}`;
+  }
+
   function plural(n, forms) {                            // ['банка', 'банки', 'банок']
     const m = n % 100, k = n % 10;
     if (m > 10 && m < 20) return forms[2];
@@ -532,8 +571,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
        view   — только просмотр (каталог «Все вкусы»), без изменения данных
        manage — вкус в коллекции: изменить оценку / удалить
        wish   — вкус в вишлисте: перенести в коллекцию (с оценкой) / удалить из вишлиста
-       add    — вкус нигде не числится (поиск): выбрать «в вишлист» или «в коллекцию»;
-                оценка появляется только после выбора «в коллекцию» */
+       add    — вкус нигде не числится (поиск): сразу шкала оценки; выбрали оценку →
+                «Добавить в коллекцию», либо запасная кнопка «В вишлист» */
   function openModal(item, { mode, category, fromPhoto }) {
     closeModal();
     haptic();
@@ -541,34 +580,62 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const wished = mode === 'wish' || (mode === 'view' && !collected && !!item.in_wishlist);
     const initial = mode === 'manage' && item.rating != null ? item.rating : null;
     let selected = initial;
-    let choice = null;                                   // add: 'wish' | 'collect'
+    let step = 'choose';                                 // choose — выбор действия, rate — шкала оценки
     let busy = false;
 
     const valueEl = el('span', { class: 'rate-val' });
     const errEl = el('div', { class: 'err' });
+    let hover = 0;                                       // предпросмотр при наведении мыши (только desktop)
+    // силуэт по эталону: тонкий ободок, плавные плечики, ровные стенки, срезанные нижние углы; без рисунка внутри
+    const CAN_SVG = '<svg class="can-ico" viewBox="0 0 30 68" aria-hidden="true">'
+      + '<rect x="1.8" y="0" width="26.4" height="1.8"/>'
+      + '<path d="M2.8 2.2H27.2Q30 3.6 30 7.2V64.2L26.6 67.6H3.4L0 64.2V7.2Q0 3.6 2.8 2.2Z"/></svg>';
+    // персональный цвет каждой банки: от красного (1) к фирменному салатовому (10)
+    const RATE_COLORS = ['#FF3333', '#FF5500', '#FF7A00', '#FFB000', '#FFCC00',
+                         '#FFEE00', '#DCEE00', '#C4EE00', '#B0FF00', '#A6FF00'];
     const rateBtns = Array.from({ length: 10 }, (_, i) => {
       const n = i + 1;
-      return el('button', {
-        type: 'button', text: String(n), 'aria-label': 'Оценка ' + n,
+      const b = el('button', {
+        type: 'button', 'aria-label': 'Оценка ' + n + ' из 10',
         onclick: () => { if (busy) return; selected = n; errEl.textContent = ''; haptic(); sync(); },
       });
+      b.innerHTML = CAN_SVG;
+      b.style.setProperty('--c', RATE_COLORS[i]);
+      b.append(el('span', { text: String(n) }));
+      b.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && !busy) { hover = n; paintRate(); } });
+      b.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { hover = 0; paintRate(); } });
+      return b;
     });
+    // накопительная подсветка: загораются все банки с 1-й по N-ю (N — наведённая или выбранная)
+    function paintRate() {
+      const n = hover || selected || 0;
+      rateBtns.forEach((b, i) => {
+        b.classList.toggle('on', i < n);
+        b.classList.toggle('sel', selected === i + 1);
+        b.setAttribute('aria-pressed', selected === i + 1 ? 'true' : 'false');
+      });
+    }
     const rateBox = el('div', { class: 'rate-box' },
       el('div', { class: 'rate-head' }, el('span', { text: 'Ваша оценка' }), valueEl),
-      el('div', { class: 'rate' }, rateBtns));
+      el('div', { class: 'rate', role: 'group', 'aria-label': 'Оценка от 1 до 10' }, rateBtns));
 
-    const choiceDefs = [
-      { id: 'wish', label: 'В вишлист', icon: ICONS.bookmark },
-      { id: 'collect', label: 'В коллекцию', icon: ICONS.plus },
-    ];
-    const choiceBtns = mode === 'add'
-      ? choiceDefs.map((c) => el('button', {
-          type: 'button',
-          onclick: () => { if (busy) return; choice = c.id; errEl.textContent = ''; haptic(); sync(); },
-        }, el('span', { class: 'ico', html: c.icon }), el('span', { text: c.label })))
-      : [];
-
-    const primary = mode === 'view' ? null : el('button', { class: 'btn', type: 'button', onclick: submit });
+    // Пошаговая схема. Шаг 1 «choose»: только выбор действия. Шаг 2 «rate»: шкала банок + подтверждение.
+    //   add    — «Добавить в коллекцию» → шкала → «Подтвердить добавление»; «В вишлист» — сразу в вишлист
+    //   wish   — «Перенести в коллекцию» → шкала → «Подтвердить перенос»; «Удалить из вишлиста»
+    //   manage — «Изменить оценку» → шкала → «Сохранить новую оценку»; «Удалить из коллекции»
+    const editable = mode !== 'view';
+    const collectBtn = editable ? el('button', {
+      class: 'btn', type: 'button',
+      text: mode === 'add' ? 'Добавить в коллекцию' : mode === 'wish' ? 'Перенести в коллекцию' : 'Изменить оценку',
+      onclick: () => { if (busy) return; step = 'rate'; errEl.textContent = ''; haptic(); sync(); },
+    }) : null;
+    const wishBtn = mode === 'add'
+      ? el('button', { class: 'btn ghost', type: 'button', text: 'В вишлист', onclick: addToWishlist }) : null;
+    const primary = editable ? el('button', { class: 'btn', type: 'button', onclick: submit }) : null;
+    const backBtn = editable ? el('button', {
+      class: 'btn ghost', type: 'button', text: 'Назад',
+      onclick: () => { if (busy) return; step = 'choose'; selected = initial; errEl.textContent = ''; sync(); },
+    }) : null;
     const delLabel = mode === 'manage' ? 'Удалить из коллекции' : 'Удалить из вишлиста';
     const delBtn = (mode === 'manage' || mode === 'wish')
       ? el('button', { class: 'btn ghost', type: 'button', text: delLabel, onclick: remove })
@@ -576,7 +643,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
     // Только для вкуса, найденного по фото: распознали неверно → считаем попытку неудачной
     // и сразу предлагаем отправить вкус на добавление в каталог.
-    const wrongBtn = fromPhoto && mode !== 'view'
+    const wrongBtn = fromPhoto && editable
       ? el('button', { class: 'btn ghost', type: 'button', text: 'Это не тот вкус', onclick: wrongFlavor })
       : null;
     function wrongFlavor() {
@@ -588,30 +655,33 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     }
 
     function sync() {
-      const showRate = mode === 'manage' || mode === 'wish' || (mode === 'add' && choice === 'collect');
-      rateBox.hidden = !showRate;
-      rateBtns.forEach((b, i) => b.classList.toggle('sel', selected === i + 1));
+      const rating = step === 'rate';
+      paintRate();
       valueEl.textContent = selected ? selected + '/10' : '—';
-      choiceBtns.forEach((b, i) => b.classList.toggle('sel', choice === choiceDefs[i].id));
-      if (primary) {
-        let label, ok;
-        if (mode === 'manage') {
-          const changed = selected !== initial;
-          ok = !!selected && changed;
-          label = !selected ? 'Выберите оценку' : changed ? 'Сохранить оценку' : 'Оценка не изменена';
-        } else if (mode === 'wish') {
-          ok = !!selected;
-          label = selected ? 'Перенести в коллекцию' : 'Выберите оценку для переноса';
-        } else if (choice === 'wish') {
-          ok = true; label = 'Добавить в вишлист';
-        } else if (choice === 'collect') {
-          ok = !!selected; label = selected ? 'Добавить в коллекцию' : 'Выберите оценку';
-        } else {
-          ok = false; label = 'Выберите действие';
-        }
-        primary.disabled = busy || !ok;
-        primary.textContent = label;
+      valueEl.style.color = selected ? RATE_COLORS[selected - 1] : '';   // текст оценки в цвете выбранной банки
+      rateBtns.forEach((b) => { b.disabled = busy; });
+      if (!editable) return;
+      rateBox.hidden = !rating;
+      collectBtn.hidden = rating;
+      if (wishBtn) wishBtn.hidden = rating;
+      if (delBtn) delBtn.hidden = rating;
+      if (wrongBtn) wrongBtn.hidden = rating;
+      primary.hidden = !rating;
+      backBtn.hidden = !rating;
+      let label, ok;
+      if (mode === 'manage') {
+        const changed = selected !== initial;
+        ok = !!selected && changed;
+        label = changed ? 'Сохранить новую оценку' : 'Оценка не изменена';
+      } else {
+        ok = !!selected;
+        label = !selected ? 'Выберите оценку' : mode === 'wish' ? 'Подтвердить перенос' : 'Подтвердить добавление';
       }
+      primary.disabled = busy || !ok;
+      primary.textContent = label;
+      collectBtn.disabled = busy;
+      backBtn.disabled = busy;
+      if (wishBtn) wishBtn.disabled = busy;
       if (delBtn) delBtn.disabled = busy;
       if (wrongBtn) wrongBtn.disabled = busy;
     }
@@ -644,12 +714,14 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       if (mode === 'wish')
         return act(() => api(`/api/wishlist/${id}/collect`, { method: 'POST', body: { rating: selected } }),
           'Перенесено в коллекцию', 'Не удалось перенести');
-      if (choice === 'wish')
-        return act(() => api('/api/wishlist/' + id, { method: 'PUT' }),
-          'Добавлено в вишлист', 'Не удалось добавить');
-      if (choice === 'collect')
-        return act(() => api('/api/collection/' + id, { method: 'PUT', body: { rating: selected } }),
-          'Добавлено в коллекцию', 'Не удалось добавить');
+      return act(() => api('/api/collection/' + id, { method: 'PUT', body: { rating: selected } }),
+        'Добавлено в коллекцию', 'Не удалось добавить');
+    }
+
+    function addToWishlist() {
+      if (busy) return;
+      return act(() => api('/api/wishlist/' + item.id, { method: 'PUT' }),
+        'Добавлено в вишлист', 'Не удалось добавить');
     }
 
     let armed = false, armTimer = null;
@@ -692,9 +764,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
               mode === 'view' && collected && item.rating != null
                 ? el('span', { class: 'tag', text: 'Оценка ' + item.rating + '/10' }) : null),
             dateLine ? el('div', { class: 'added', text: dateLine }) : null)),
-        mode === 'add' ? el('div', { class: 'choice' }, choiceBtns) : null,
-        mode === 'view' ? null : rateBox,
-        mode === 'view' ? null : el('div', { class: 'actions' }, errEl, primary, delBtn, wrongBtn)));
+        editable ? rateBox : null,
+        editable ? el('div', { class: 'actions' }, errEl, collectBtn, wishBtn, primary, backBtn, delBtn, wrongBtn) : null));
     sync();
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';
@@ -1290,10 +1361,11 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   /* ── формы: «Предложить вкус» и «Есть идеи по разработке?» ── */
   // fields: [{ label, multiline, max, min, placeholder, value, required }]
-  function openFormModal({ title, note, fields, submitLabel, okMsg, onSubmit, onDone }) {
+  function openFormModal({ title, note, fields, submitLabel, okMsg, onSubmit, onDone, attach = false }) {
     closeModal();
     haptic();
     let busy = false;
+    let file = null, previewUrl = null;                 // необязательное фото
     const errEl = el('div', { class: 'err' });
     const nodes = fields.map((f) => {
       const n = el(f.multiline ? 'textarea' : 'input', {
@@ -1304,16 +1376,57 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       n.addEventListener('input', () => { errEl.textContent = ''; sync(); });
       return n;
     });
+    // Вложение: label+скрытый input (нажатие нативно открывает выбор файла), превью и кнопка «убрать»
+    let attachBox = null;
+    if (attach) {
+      const inputId = 'attach-' + Math.random().toString(36).slice(2);
+      const fileInput = el('input', { id: inputId, type: 'file', accept: 'image/*', class: 'vh', tabindex: '-1', 'aria-hidden': 'true' });
+      const pick = el('label', { class: 'attach-btn', for: inputId, role: 'button', tabindex: '0',
+        onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } } });
+      const prev = el('div', { class: 'attach-prev' });
+      prev.hidden = true;
+      const clearFile = () => {
+        file = null;
+        if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+        prev.hidden = true; prev.replaceChildren();
+        pick.textContent = '📎 Прикрепить фото (необязательно)';
+        errEl.textContent = '';
+      };
+      clearFile();
+      fileInput.addEventListener('change', () => {
+        const f = fileInput.files && fileInput.files[0];
+        fileInput.value = '';                            // чтобы то же фото можно было выбрать снова
+        if (!f || busy) return;
+        if (f.type && !f.type.startsWith('image/')) { toast('Выберите изображение'); return; }
+        clearFile();
+        file = f;
+        previewUrl = URL.createObjectURL(f);
+        prev.replaceChildren(
+          el('img', { src: previewUrl, alt: 'Выбранное фото' }),
+          el('button', { type: 'button', 'aria-label': 'Убрать фото', text: '✕', onclick: () => { if (!busy) { clearFile(); sync(); } } }));
+        prev.hidden = false;
+        pick.textContent = '📎 Заменить фото';
+        sync();                                          // фото прикреплено — кнопка «Отправить» включается сразу
+      });
+      attachBox = el('div', { class: 'attach' }, fileInput, pick, prev);
+    }
     const submit = el('button', { class: 'btn', type: 'button', text: submitLabel, onclick: send });
+    // Форма готова к отправке, если текст нужной длины ИЛИ прикреплено фото
     function valid() {
-      return fields.every((f, i) => !f.required || nodes[i].value.trim().length >= (f.min || 1));
+      const textOk = fields.every((f, i) => !f.required || nodes[i].value.trim().length >= (f.min || 1));
+      return textOk || (attach && !!file);
     }
     function sync() { submit.disabled = busy || !valid(); }
     async function send() {
       if (busy || !valid()) return;
       busy = true; errEl.textContent = ''; sync();
       try {
-        await onSubmit(nodes.map((n) => n.value.trim()));
+        let photo = null;
+        if (file) {
+          photo = await prepareImage(file);              // уменьшаем до 1280 px, HEIC → JPEG
+          if (photo.size > 8 * 1024 * 1024) throw new Error('Фото слишком большое (максимум 8 МБ)');
+        }
+        await onSubmit(nodes.map((n) => n.value.trim()), photo);
         hapticOk();
         closeModal();
         toast(okMsg);
@@ -1330,12 +1443,25 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         el('h3', { class: 'sheet-t', text: title }),
         note ? el('div', { class: 'm-note', text: note }) : null,
         fields.map((f, i) => el('div', { class: 'f' }, el('div', { class: 'f-label', text: f.label }), nodes[i])),
+        attachBox,
         el('div', { class: 'actions' }, errEl, submit)));
+    overlay._cleanup = () => {                           // закрытие/успешная отправка: сбрасываем файл и превью
+      file = null;
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    };
     sync();
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';
     modalEl = overlay;
     updateBack();
+  }
+
+  // multipart-тело: текстовые поля + необязательное фото (поле «image»)
+  function formData(fields, photo) {
+    const fd = new FormData();
+    Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
+    if (photo) fd.append('image', photo, 'photo.jpg');
+    return fd;
   }
 
   function openSuggestFlavor({ source, title = '', wrong = false }) {
@@ -1347,11 +1473,11 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         : 'Напишите название вкуса, которого нет в каталоге, и мы добавим его.',
       fields: [
         { label: 'Название вкуса', max: 100, min: 2, required: true, value: title, placeholder: 'Например: Monster Ultra Gold' },
-        { label: 'Комментарий (необязательно)', multiline: true, max: 500, placeholder: 'Цвет банки, страна, где нашёл…' },
       ],
+      attach: true,
       submitLabel: 'Отправить',
       okMsg: 'Спасибо! Предложение отправлено',
-      onSubmit: ([name, comment]) => api('/api/suggestions/flavor', { method: 'POST', body: { title: name, comment, source } }),
+      onSubmit: ([name], photo) => api('/api/suggestions/flavor', { method: 'POST', body: formData({ title: name, source }, photo) }),
       onDone: () => {
         if (source === 'photo') {
           state.photoFails = 0;
@@ -1365,10 +1491,11 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     openFormModal({
       title: 'Есть идеи по разработке?',
       note: 'Расскажите, что улучшить или добавить в приложение.',
-      fields: [{ label: 'Ваша идея или отзыв', multiline: true, max: 1000, min: 5, required: true }],
+      fields: [{ label: 'Ваша идея или отзыв', multiline: true, max: 1000, min: 3, required: true }],
+      attach: true,
       submitLabel: 'Отправить',
       okMsg: 'Спасибо! Идея отправлена',
-      onSubmit: ([text]) => api('/api/suggestions/dev', { method: 'POST', body: { text } }),
+      onSubmit: ([text], photo) => api('/api/suggestions/dev', { method: 'POST', body: formData({ text }, photo) }),
     });
   }
 
@@ -1414,6 +1541,20 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   }
 
   /* ── экран: админ-панель ── */
+  // Просмотр фото на весь экран: тап по фону или Esc закрывают
+  function openImageViewer(src) {
+    const img = el('img', { alt: 'Фото' });
+    const note = el('div', { class: 'lb-load', text: 'Загрузка…' });
+    const close = () => { document.removeEventListener('keydown', onKey); lb.remove(); };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    const lb = el('div', { class: 'lb', role: 'dialog', 'aria-modal': 'true', onclick: close },
+      note, el('button', { class: 'lb-x', type: 'button', 'aria-label': 'Закрыть', text: '✕' }));
+    document.addEventListener('keydown', onKey);
+    document.body.append(lb);
+    loadBlob(src).then((url) => { img.src = url; note.replaceWith(img); },
+                       () => { note.textContent = 'Не удалось загрузить фото'; });
+  }
+
   function adminSection(title, items, kind) {
     const card = el('section', { class: 'card' },
       el('div', { class: 'card-title' }, el('h2', { text: title }), el('span', { text: 'активных: ' + items.length })));
@@ -1436,13 +1577,18 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         }
       });
       const d = parseUtc(it.created_at);
+      const thumb = it.image_url
+        ? el('button', { class: 't-thumb', type: 'button', 'aria-label': 'Открыть фото', onclick: () => openImageViewer(it.image_url) },
+            canImg(it.image_url, 'Приложенное фото'))
+        : null;
       card.append(el('div', { class: 'task' },
         el('div', { class: 't-head' },
           el('b', { text: '#' + (i + 1) }),
           kind === 'flavor' ? el('span', { class: 'tag', text: it.source === 'photo' ? 'по фото' : 'из поиска' }) : null,
-          el('span', { class: 't-meta', text: 'ID ' + it.user_id + (d ? ', ' + fmtDate(it.created_at) : '') })),
+          el('span', { class: 't-meta', text: 'ID ' + it.user_id + (d ? ', ' + fmtDateTime(it.created_at) : '') })),
         el('div', { class: 't-body', text: kind === 'flavor' ? it.title : it.text }),
-        kind === 'flavor' && it.comment ? el('div', { class: 'note', text: it.comment }) : null,
+        kind === 'flavor' && it.comment ? el('div', { class: 'note', text: it.comment }) : null,   // комментарии старых заявок
+        thumb,
         btn));
     });
     return card;
