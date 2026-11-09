@@ -10,7 +10,7 @@
       main.py
       index.html            (или static/index.html)
       app.db                (создаётся автоматически)
-      seed.json             (необязательно: первичное наполнение каталога)
+      seed.json             (необязательно: каталог; при каждом старте в базу добавляется всё, чего там ещё нет)
       static/images/1.png   (имя файла = ID вкуса)
 
 Переменные окружения:
@@ -197,7 +197,7 @@ def init_db() -> None:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
         migrate(conn)
-        seed_if_empty(conn)
+        sync_seeds(conn)
         conn.commit()
 
 
@@ -207,8 +207,8 @@ def _keywords(value) -> str:
     return str(value or "")
 
 
-def seed_if_empty(conn: sqlite3.Connection) -> None:
-    """Если каталог пуст и рядом лежит seed.json — загружаем его.
+def sync_seeds(conn: sqlite3.Connection) -> None:
+    """Синхронизирует каталог с seed.json при КАЖДОМ старте приложения — только добавляет новое.
 
     Формат seed.json:
     {"categories": [
@@ -218,29 +218,67 @@ def seed_if_empty(conn: sqlite3.Connection) -> None:
     ]}
     «id» вкуса должен совпадать с именем картинки (1.png). «keywords» — необязательно
     (строка или список): слова, по которым вкус можно найти на вкладке «Поиск».
-    """
-    if conn.execute("SELECT 1 FROM flavors LIMIT 1").fetchone() or not SEED_PATH.exists():
+
+    Правила (данные пользователей не затрагиваются никогда):
+      • категория: нет в базе — создаётся; есть — обновляется только порядок сортировки (sort_order);
+      • вкус с id: нет такого id и нет вкуса с тем же названием в той же категории — добавляется;
+      • вкус без id: добавляется, если в категории ещё нет вкуса с таким названием;
+      • существующие вкусы (названия, подсказки, id) и таблицы user_collection / wishlist /
+        *_suggestions не изменяются; ничего не удаляется. Намеренно нет REPLACE и DELETE:
+        из-за ON DELETE CASCADE они стёрли бы оценки пользователей.
+    Ошибка в seed.json не должна ронять приложение: пишем в лог и оставляем базу как есть."""
+    if not SEED_PATH.exists():
         return
-    data = json.loads(SEED_PATH.read_text(encoding="utf-8"))
-    for c_order, cat in enumerate(data.get("categories", [])):
-        conn.execute(
-            "INSERT OR IGNORE INTO categories (name, sort_order) VALUES (?, ?)",
-            (cat["name"], c_order),
-        )
-        cat_id = conn.execute("SELECT id FROM categories WHERE name = ?", (cat["name"],)).fetchone()["id"]
-        for f_order, fl in enumerate(cat.get("flavors", [])):
-            kw = _keywords(fl.get("keywords"))
-            if fl.get("id") is not None:
-                conn.execute(
-                    "INSERT OR IGNORE INTO flavors (id, title, category_id, sort_order, keywords) "
-                    "VALUES (?, ?, ?, ?, ?)",
-                    (fl["id"], fl["title"], cat_id, f_order, kw),
-                )
-            else:
-                conn.execute(
-                    "INSERT INTO flavors (title, category_id, sort_order, keywords) VALUES (?, ?, ?, ?)",
-                    (fl["title"], cat_id, f_order, kw),
-                )
+    conn.execute("SAVEPOINT sync_seeds")                 # всё или ничего
+    try:
+        data = json.loads(SEED_PATH.read_text(encoding="utf-8"))
+        added_cats = added_flavors = 0
+        for c_order, cat in enumerate(data.get("categories", [])):
+            name = str(cat.get("name") or "").strip()
+            if not name:
+                log.warning("seed.json: категория без названия пропущена (позиция %s)", c_order)
+                continue
+            known = conn.execute("SELECT 1 FROM categories WHERE name = ?", (name,)).fetchone()
+            conn.execute(
+                "INSERT INTO categories (name, sort_order) VALUES (?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET sort_order = excluded.sort_order",
+                (name, c_order),
+            )
+            added_cats += 0 if known else 1
+            cat_id = conn.execute("SELECT id FROM categories WHERE name = ?", (name,)).fetchone()["id"]
+
+            for f_order, fl in enumerate(cat.get("flavors", [])):
+                title = str(fl.get("title") or "").strip()
+                if not title:
+                    log.warning("seed.json: вкус без названия пропущен (%s, позиция %s)", name, f_order)
+                    continue
+                if conn.execute(
+                    "SELECT 1 FROM flavors WHERE category_id = ? AND title = ?", (cat_id, title)
+                ).fetchone():
+                    continue                             # такой вкус в этой категории уже есть
+                kw = _keywords(fl.get("keywords"))
+                if fl.get("id") is not None:
+                    cur = conn.execute(                  # IGNORE: занятый id (чужой вкус) не перезаписываем
+                        "INSERT OR IGNORE INTO flavors (id, title, category_id, sort_order, keywords) "
+                        "VALUES (?, ?, ?, ?, ?)",
+                        (int(fl["id"]), title, cat_id, f_order, kw),
+                    )
+                    if cur.rowcount == 0:
+                        log.warning("seed.json: id %s уже занят другим вкусом, «%s» пропущен", fl["id"], title)
+                        continue
+                else:
+                    conn.execute(
+                        "INSERT INTO flavors (title, category_id, sort_order, keywords) VALUES (?, ?, ?, ?)",
+                        (title, cat_id, f_order, kw),
+                    )
+                added_flavors += 1
+        conn.execute("RELEASE sync_seeds")
+        if added_cats or added_flavors:
+            log.info("seed.json: добавлено категорий %s, вкусов %s", added_cats, added_flavors)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, sqlite3.Error):
+        log.exception("seed.json не применён: ошибка в файле, база осталась без изменений")
+        conn.execute("ROLLBACK TO sync_seeds")
+        conn.execute("RELEASE sync_seeds")
 
 
 # ───────────────────────── Авторизация Telegram ─────────────────────────
