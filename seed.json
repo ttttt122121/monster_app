@@ -16,13 +16,15 @@
       ]
     },
     {
-      "name": "Collabs",
+      "name": "Celebrity Collabs",
       "flavors": [
         { "id": 5, "title": "Monster Lando Norris" },
-        { "id": 15, "title": "Monster Full Throttle Zero Sugar" },
+        { "id": 74, "title": "Monster Lando Norris Zero Sugar" },
         { "id": 50, "title": "Monster VR46 The Doctor" },
         { "id": 53, "title": "Monster VR46 Zero Sugar" },
-        { "id": 70, "title": "Monster Lewis Hamilton LH44" }
+        { "id": 70, "title": "Monster Lewis Hamilton LH44" },
+        { "id": 15, "title": "Monster Full Throttle Zero Sugar" },
+        { "id": 75, "title": "Monster Energy Gronk" }
       ]
     },
     {
@@ -59,7 +61,9 @@
         { "id": 56, "title": "Juiced Monster Khaotic" },
         { "id": 57, "title": "Juiced Monster Mixxd Punch" },
         { "id": 58, "title": "Juiced Monster Ripper" },
-        { "id": 69, "title": "Juiced Monster Aussie Lemonade" }
+        { "id": 69, "title": "Juiced Monster Aussie Lemonade" },
+        { "id": 80, "title": "Monster Punch Mad Dog" },
+        { "id": 81, "title": "Monster Punch Baller's Blend" }
       ]
     },
     {
@@ -111,6 +115,27 @@
         { "id": 47, "title": "Java Monster Mean Bean" },
         { "id": 48, "title": "Java Monster Loca Moca" },
         { "id": 49, "title": "Java Monster Salted Caramel" }
+      ]
+    },
+    {
+      "name": "Dragon Iced Tea",
+      "flavors": [
+        { "id": 76, "title": "Monster Energy Dragon Ice Tea Lemon" },
+        { "id": 77, "title": "Monster Energy Dragon Ice Tea Peach" },
+        { "id": 78, "title": "Monster Energy Dragon Ice Tea Raspberry Tea" },
+        { "id": 79, "title": "Monster Energy Dragon Ice Tea Green Tea" }
+      ]
+    },
+    {
+      "name": "The Beast Unleashed",
+      "flavors": [
+        { "id": 82, "title": "Monster The Beast Unleashed Mean Green" },
+        { "id": 83, "title": "Monster The Beast Unleashed Killer Sunrise" },
+        { "id": 84, "title": "Monster The Beast Unleashed Gnarly Grape" },
+        { "id": 85, "title": "Monster The Beast Unleashed Pink Poison" },
+        { "id": 86, "title": "Monster The Beast Unleashed White Haze" },
+        { "id": 87, "title": "Monster The Beast Unleashed Peach Perfect" },
+        { "id": 88, "title": "Monster The Beast Unleashed Scary Berries" }
       ]
     }
   ]
