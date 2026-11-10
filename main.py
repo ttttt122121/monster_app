@@ -193,6 +193,14 @@ def init_db() -> None:
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     SUGGESTIONS_DIR.mkdir(parents=True, exist_ok=True)
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Автоматический перенос базы из репозитория на Volume при первом запуске
+    bundled_db = BASE_DIR / "app.db"
+    if not DB_PATH.exists() and bundled_db.is_file() and bundled_db.resolve() != DB_PATH.resolve():
+        import shutil
+        shutil.copy(bundled_db, DB_PATH)
+        log.info("База данных успешно скопирована на Volume из репозитория!")
+
     with closing(connect()) as conn:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
