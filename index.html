@@ -169,7 +169,7 @@ nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-wi
 .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 
-/* матрица активности (26 недель × 7 дней) */
+/* матрица активности: неделя / месяц / 3 месяца — календари, год — сетка в стиле GitHub */
 .heat-months { display: grid; grid-template-columns: repeat(var(--cols, 13), 1fr); gap: 3px; height: 14px; margin-bottom: 4px; }
 .heat-months span { font-size: 10px; line-height: 14px; color: var(--muted); white-space: nowrap; }
 .heat { display: grid; grid-template-columns: repeat(var(--cols, 13), 1fr); grid-template-rows: repeat(7, auto);
@@ -184,13 +184,28 @@ nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-wi
 .heat.cal .cell.l1, .heat.cal .cell.l2 { color: var(--text); }
 .heat.cal .cell.l3, .heat.cal .cell.l4 { color: #000; font-weight: 700; }
 .heat.cal .cell.none { color: transparent; }
-.per { height: 32px; max-width: 60%; padding: 0 30px 0 12px; background-color: var(--card); color: var(--text);
-  border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600; outline: none;
-  cursor: pointer; -webkit-appearance: none; appearance: none; transition: border-color .15s;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23B3B3B3' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 10px center; }
-.per:focus, .per:active { border-color: var(--accent); }
-.per option { background: var(--card); color: var(--text); }
+/* переключатель периода: ряд табов-пилюль в шапке карточки */
+.card-title.has-seg { margin-bottom: 10px; }
+.act-seg { display: flex; gap: 4px; padding: 3px; margin-bottom: 14px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 12px; }
+.act-seg button { flex: 1 1 0; min-width: 0; height: 30px; padding: 0 4px; border: 0; border-radius: 9px; background: transparent;
+  color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; -webkit-tap-highlight-color: transparent;
+  transition: background .15s, color .15s; }
+.act-seg button:active { opacity: .8; }
+.act-seg button.on { background: var(--accent); color: #000; }
+.cal-title { font-size: 13px; font-weight: 700; margin: 0 0 8px; }
+.cal-block + .cal-block { margin-top: 16px; }
+.heat .cell[data-k] { cursor: pointer; }
+.heat.cal .cell.future { color: #4a4a4a; }
+.cell.today { outline: 1.5px solid var(--text); outline-offset: -1.5px; }
+.heat.cal.compact .cell { height: 26px; font-size: 10px; border-radius: 6px; }
+.heat-months.dense { gap: 2px; }
+/* окно «что добавлено в этот день» */
+.day-sum { color: var(--muted); font-size: 14px; margin: 0; }
+.day-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.day-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px; font-size: 15px; }
+.day-list time { color: var(--muted); font-size: 13px; flex: none; }
 .cell { aspect-ratio: 1 / 1; border-radius: 2px; background: #202020; }
 .cell.l1 { background: #425818; }
 .cell.l2 { background: #639010; }
@@ -409,14 +424,15 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     { id: 'profile', label: 'Профиль' },
   ];
 
-  // периоды матрицы активности: weeks — сколько недель показываем; cal — календарь (недели строками)
+  // режимы блока «Активность»: week — текущая неделя Пн–Вс, month — календарь текущего месяца,
+  // quarter — сетка GitHub за последние 13 недель, year — сетка GitHub за текущий год
   const PERIODS = [
-    { label: 'за неделю', weeks: 1, cal: true },
-    { label: 'за месяц', weeks: 4, cal: true },
-    { label: 'за 3 месяца', weeks: 13, cal: false },
-    { label: 'за год', weeks: 52, cal: false },
+    { key: 'week', label: 'Неделя', full: 'за неделю' },
+    { key: 'month', label: 'Месяц', full: 'за месяц' },
+    { key: 'quarter', label: '3 месяца', full: 'за 3 месяца' },
+    { key: 'year', label: 'Год', full: 'за год' },
   ];
-  let periodIdx = 0;                                    // выбранный период живёт между перерисовками экрана
+  let periodIdx = 1;                                    // по умолчанию «за месяц»; выбор живёт между перерисовками экрана
   // sub: main | catalog | wishlist (внутри «Коллекции») | settings | admin (внутри «Профиля»)
   // q — запрос поиска; photoFails — неудачных или ложных распознаваний по фото подряд (с 1-й показываем «Предложить вкус»)
   const state = { tab: 'collection', sub: 'main', q: '', photoFails: 0 };
@@ -1273,82 +1289,185 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function dayKey(d) { return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
 
+  // Окно дня: точная дата, сколько банок добавлено и какие именно
+  function openDayModal(date, list) {
+    closeModal();
+    const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const title = cap(date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      .replace(/\s*г\.$/, ''));
+    const rows = list.slice().sort((a, b) => a.d - b.d).map((x) =>
+      el('li', {}, el('span', { text: x.title }),
+        el('time', { text: x.d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) })));
+    const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
+      el('div', { class: 'modal sheet', role: 'dialog', 'aria-modal': 'true' },
+        el('button', { class: 'close', type: 'button', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('h3', { class: 'sheet-t', text: title }),
+        el('p', { class: 'day-sum', text: `Добавлено: ${list.length} ${plural(list.length, CANS)}` }),
+        el('ul', { class: 'day-list' }, rows)));
+    document.body.append(overlay);
+    document.body.style.overflow = 'hidden';
+    modalEl = overlay;
+    updateBack();
+  }
+
   function activityCard(items) {
-    // сколько банок добавлено в каждый (локальный) день
+    // что и когда добавлено в каждый (локальный) день
     const perDay = new Map();
     for (const it of items) {
       const d = parseUtc(it.added_at);
-      if (d) perDay.set(dayKey(d), (perDay.get(dayKey(d)) || 0) + 1);
+      if (!d) continue;
+      const k = dayKey(d);
+      if (!perDay.has(k)) perDay.set(k, []);
+      perDay.get(k).push({ title: it.title, d });
     }
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dow = (today.getDay() + 6) % 7;                              // Пн = 0
+    const todayKey = dayKey(today);
     const level = (n) => (n <= 0 ? 0 : n >= 4 ? 4 : n);
-    const monthName = (d) => d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', '');
     const WD = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-
+    const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+    const mondayIndex = (d) => (d.getDay() + 6) % 7;                  // Пн = 0 … Вс = 6
+    const monthTitle = (y, m) => cap(new Date(y, m, 1).toLocaleDateString('ru-RU', { month: 'long' })) + ' ' + y;
+    const MON3 = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const dates = new Map();                                          // dayKey -> Date плиток на экране
     const body = el('div');
 
-    function draw() {
-      const P = PERIODS[periodIdx];
-      const weeks = P.weeks;
-      const startOffset = -(dow + 7 * (weeks - 1));
-      const dayAt = (off) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + startOffset + off);
+    function makeCell(date, showNum) {
+      const key = dayKey(date);
+      dates.set(key, date);
+      const n = (perDay.get(key) || []).length;
+      const label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      return el('div', {
+        class: 'cell l' + level(n) + (date > today ? ' future' : '') + (key === todayKey ? ' today' : ''),
+        'data-k': key,
+        title: n ? `${label}: ${n} ${plural(n, CANS)}` : `${label}: ничего`,
+        text: showNum ? String(date.getDate()) : null,
+      });
+    }
+    const weekdays = () => el('div', { class: 'heat-wd' }, WD.map((x) => el('span', { text: x })));
 
+    // календарь одного месяца: 7 колонок Пн–Вс, 1-е число стоит под своим днём недели
+    function monthBlock(y, m, compact) {
+      const lead = mondayIndex(new Date(y, m, 1));
+      const days = new Date(y, m + 1, 0).getDate();
       const cells = [];
+      for (let i = 0; i < lead; i++) cells.push(el('div', { class: 'cell none' }));
+      for (let d = 1; d <= days; d++) cells.push(makeCell(new Date(y, m, d), true));
+      return el('div', { class: 'cal-block' },
+        el('div', { class: 'cal-title', text: monthTitle(y, m) }),
+        weekdays(),
+        el('div', { class: 'heat cal' + (compact ? ' compact' : '') }, cells));
+    }
+
+    function drawWeek() {                                             // текущая неделя целиком: Пн–Вс
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - mondayIndex(today));
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      const fmt = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const range = start.getMonth() === end.getMonth()
+        ? `${start.getDate()}–${fmt(end)}` : `${fmt(start)} – ${fmt(end)}`;
+      const cells = Array.from({ length: 7 }, (_, i) =>
+        makeCell(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), true));
+      return [el('div', { class: 'cal-block' },
+        el('div', { class: 'cal-title', text: 'Текущая неделя: ' + range }),
+        weekdays(),
+        el('div', { class: 'heat cal' }, cells))];
+    }
+
+    function drawQuarter() {                                          // 13 недель подряд, последняя — текущая; недели — колонками
+      const weeks = 13;
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - mondayIndex(today) - 7 * (weeks - 1));
+      const dayAt = (off) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + off);
+      const cells = [];
+      for (let i = 0; i < weeks * 7; i++) cells.push(makeCell(dayAt(i), false));
+      // подписи месяцев: над колонкой, где встречается 1-е число; начало диапазона подписываем, если до первой метки есть место
+      const marks = [];
       for (let w = 0; w < weeks; w++) {
         for (let d = 0; d < 7; d++) {
           const date = dayAt(w * 7 + d);
-          if (date > today) { cells.push(el('div', { class: 'cell none' })); continue; }
-          const n = perDay.get(dayKey(date)) || 0;
-          const label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-          cells.push(el('div', {
-            class: 'cell l' + level(n),
-            title: n ? `${label}: ${n} ${plural(n, CANS)}` : `${label}: ничего`,
-            text: P.cal ? String(date.getDate()) : null,
-          }));
+          if (date.getDate() === 1) marks.push({ w, m: date.getMonth() });
         }
       }
-
-      let head;
-      if (P.cal) {
-        head = el('div', { class: 'heat-wd' }, WD.map((x) => el('span', { text: x })));
-      } else {
-        // подписи месяцев: ставим над неделей, где месяц сменился; близкие метки отбрасываем
-        const cand = [];
-        for (let w = 0; w < weeks; w++) {
-          const m = dayAt(w * 7).getMonth();
-          if (w === 0 || m !== dayAt((w - 1) * 7).getMonth()) cand.push(w);
-        }
-        const labelWeeks = [];
-        let next = Infinity;
-        for (let i = cand.length - 1; i >= 0; i--) {
-          if (next - cand[i] >= 3) { labelWeeks.unshift(cand[i]); next = cand[i]; }
-        }
-        head = el('div', { class: 'heat-months', style: `--cols:${weeks}` },
-          labelWeeks.map((w) => el('span', { style: `grid-column:${w + 1} / span 3`, text: monthName(dayAt(w * 7)) })));
-      }
-
-      const heat = el('div', {
-        class: 'heat' + (P.cal ? ' cal' : '') + (weeks > 26 ? ' dense' : ''),
-        style: P.cal ? null : `--cols:${weeks}`,
-      }, cells);
-      body.replaceChildren(head, heat);
+      if (!marks.length || marks[0].w >= 3) marks.unshift({ w: 0, m: dayAt(0).getMonth() });
+      const labels = marks.map(({ w, m }) =>
+        el('span', { style: `grid-column:${w + 1} / span ${Math.min(3, weeks - w)}`, text: MON3[m] }));
+      const fmt = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      return [
+        el('div', { class: 'cal-title', text: `Последние 13 недель: ${fmt(start)} – ${fmt(today)}` }),
+        el('div', { class: 'heat-months', style: `--cols:${weeks}` }, labels),
+        el('div', { class: 'heat', style: `--cols:${weeks}` }, cells),
+      ];
     }
 
-    const toggle = el('select', { class: 'per', 'aria-label': 'Период активности' },
-      PERIODS.map((p, i) => el('option', { value: String(i), text: p.label })));
-    toggle.value = String(periodIdx);
-    toggle.addEventListener('change', () => {
+    function drawYear() {                                             // январь–декабрь текущего года, недели — колонками
+      const y = today.getFullYear();
+      const jan1 = new Date(y, 0, 1);
+      const lead = mondayIndex(jan1);
+      const daysInYear = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 366 : 365;
+      const cols = Math.ceil((lead + daysInYear) / 7);
+      const cells = [];
+      for (let i = 0; i < cols * 7; i++) {
+        const di = i - lead;
+        cells.push(di < 0 || di >= daysInYear
+          ? el('div', { class: 'cell none' })
+          : makeCell(new Date(y, 0, 1 + di), false));
+      }
+      const labels = [];
+      for (let m = 0; m < 12; m++) {
+        const di = Math.round((new Date(y, m, 1) - jan1) / 864e5);
+        const col = Math.floor((lead + di) / 7);
+        labels.push(el('span', { style: `grid-column:${col + 1} / span ${Math.min(3, cols - col)}`, text: MON3[m] }));
+      }
+      return [
+        el('div', { class: 'cal-title', text: String(y) }),
+        el('div', { class: 'heat-months dense', style: `--cols:${cols}` }, labels),
+        el('div', { class: 'heat dense', style: `--cols:${cols}` }, cells),
+      ];
+    }
+
+    function draw() {
+      dates.clear();
+      const key = PERIODS[periodIdx].key;
+      body.replaceChildren(...(key === 'week' ? drawWeek() : key === 'quarter' ? drawQuarter()
+        : key === 'year' ? drawYear() : [monthBlock(today.getFullYear(), today.getMonth(), false)]));
+    }
+
+    // клик по дню: будущее — ничего; прошлое без добавлений — тост; с добавлениями — окно со списком
+    body.addEventListener('click', (e) => {
+      const c = e.target.closest('.cell[data-k]');
+      const date = c && dates.get(c.dataset.k);
+      if (!date || date > today) return;                              // будущие дни: ничего не происходит
+      const list = perDay.get(c.dataset.k) || [];
+      if (!list.length) {
+        toast(date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ': ничего не добавлено');
+        return;
+      }
       haptic();
-      periodIdx = Number(toggle.value);
-      draw();
+      openDayModal(date, list);
     });
+
+    const segBtns = PERIODS.map((p, i) => el('button', {
+      type: 'button', role: 'tab', text: p.label, 'aria-label': p.full,
+      onclick: () => {
+        if (i === periodIdx) return;
+        haptic();
+        periodIdx = i;
+        paintSeg();
+        draw();
+      },
+    }));
+    function paintSeg() {
+      segBtns.forEach((b, i) => {
+        b.classList.toggle('on', i === periodIdx);
+        b.setAttribute('aria-selected', i === periodIdx ? 'true' : 'false');
+      });
+    }
+    paintSeg();
     draw();
 
     return el('section', { class: 'card' },
-      el('div', { class: 'card-title' }, el('h2', { text: 'Активность' }), toggle),
+      el('div', { class: 'card-title has-seg' }, el('h2', { text: 'Активность' })),
+      el('div', { class: 'act-seg', role: 'tablist', 'aria-label': 'Период активности' }, segBtns),
       body,
       el('div', { class: 'legend' },
         el('em', { text: 'Меньше' }),
