@@ -193,35 +193,6 @@ def init_db() -> None:
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     SUGGESTIONS_DIR.mkdir(parents=True, exist_ok=True)
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    
-    bundled_db = BASE_DIR / "app.db"
-    if bundled_db.is_file() and bundled_db.resolve() != DB_PATH.resolve():
-        should_copy = False
-        if not DB_PATH.exists():
-            should_copy = True
-        else:
-            # Проверяем, есть ли записи в основной таблице базы на диске
-            try:
-                with closing(sqlite3.connect(DB_PATH)) as temp_conn:
-                    cursor = temp_conn.cursor()
-                    # Замените 'drinks' или 'users' на имя вашей реальной таблицы с коллекцией
-                    cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='drinks';")
-                    table_exists = cursor.fetchone()[0] > 0
-                    if table_exists:
-                        cursor.execute("SELECT COUNT(*) FROM drinks;")
-                        rows_count = cursor.fetchone()[0]
-                        if rows_count == 0:
-                            should_copy = True
-                    else:
-                        should_copy = True
-            except Exception:
-                should_copy = True
-
-        if should_copy:
-            import shutil
-            shutil.copy(bundled_db, DB_PATH)
-            log.info("База данных успешно принудительно скопирована на Volume из бэкапа!")
-
     with closing(connect()) as conn:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
