@@ -439,7 +439,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     return n;
   }
 
-  async function api(path, { method = 'GET', body, signal } = {}) {
+  async function request(path, { method = 'GET', body, signal } = {}) {
     const headers = {
       'X-Telegram-Init-Data': (tg && tg.initData) || '',
       'ngrok-skip-browser-warning': '1',
@@ -464,6 +464,47 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       throw err;
     }
     return resp.json();
+  }
+
+  // ── Кеш ответов API (в памяти) ──
+  // GET /api/collection, /api/catalog, /api/wishlist, /api/me отдаются из кеша, пока данные «свежие» (API_TTL):
+  // переключение вкладок не ходит в сеть. Любое изменение данных (PUT/POST/DELETE) сбрасывает весь кеш.
+  const CACHEABLE = new Set(['/api/collection', '/api/catalog', '/api/wishlist', '/api/me']);
+  const API_TTL = 2 * 60 * 1000;                         // мс; дальше данные считаются устаревшими
+  const apiCache = new Map();                            // path -> { t, data }
+  const apiInflight = new Map();                         // path -> Promise: два одинаковых запроса сразу — одна загрузка
+  let apiEpoch = 0;                                      // растёт при каждом сбросе: запоздавший ответ не попадёт в кеш
+  const cloneData = (d) => (typeof structuredClone === 'function' ? structuredClone(d) : JSON.parse(JSON.stringify(d)));
+  function invalidateApiCache() { apiCache.clear(); apiInflight.clear(); apiEpoch++; }
+
+  // opts.fresh — игнорировать кеш и перезагрузить (результат всё равно кладётся в кеш)
+  async function api(path, opts = {}) {
+    const method = opts.method || 'GET';
+    if (method === 'GET') {
+      if (!CACHEABLE.has(path) || opts.signal) return request(path, opts);
+      if (!opts.fresh) {
+        const hit = apiCache.get(path);
+        if (hit && Date.now() - hit.t < API_TTL) return cloneData(hit.data);
+        const wait = apiInflight.get(path);
+        if (wait) return wait.then(cloneData);
+      }
+      const epoch = apiEpoch;
+      const p = request(path, opts).then((data) => {
+        if (epoch === apiEpoch) apiCache.set(path, { t: Date.now(), data });
+        return data;
+      });
+      const cleanup = () => { if (apiInflight.get(path) === p) apiInflight.delete(path); };
+      p.then(cleanup, cleanup);
+      apiInflight.set(path, p);
+      return p.then(cloneData);                          // views получают копию и не могут испортить кеш
+    }
+    try {
+      return await request(path, opts);
+    } finally {
+      // изменения (и неудачные тоже: после 404/409 состояние на сервере могло отличаться) → кеш недействителен.
+      // Поиск по фото данные не меняет.
+      if (path !== '/api/search-by-photo') invalidateApiCache();
+    }
   }
 
   function parseUtc(s) {                                 // сервер отдаёт UTC: 'YYYY-MM-DD HH:MM:SS'
@@ -499,21 +540,38 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   // <img src> не может отправить свои заголовки, а ngrok (бесплатный) вместо картинки
   // отдаёт HTML-страницу с предупреждением. Поэтому качаем картинку через fetch()
   // с заголовком ngrok-skip-browser-warning и показываем через blob-URL.
-  const blobCache = new Map();                      // src -> Promise<blob-URL>
-  function loadBlob(src) {
-    if (!blobCache.has(src)) {
-      blobCache.set(src, fetch(src, { headers: { 'ngrok-skip-browser-warning': '1' } })
-        .then((r) => {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.blob();
-        })
-        .then((b) => {
-          if (!b.type.startsWith('image/')) throw new Error('not an image');
-          return URL.createObjectURL(b);
-        })
-        .catch((e) => { blobCache.delete(src); throw e; }));
+  // Кеш ограничен (LRU): в мобильном WebView blob-URL держат картинки в памяти, поэтому при переполнении
+  // самые давние записи вытесняются, а их URL освобождаются через URL.revokeObjectURL().
+  const BLOB_CACHE_MAX = 80;
+  const blobCache = new Map();                      // src -> Promise<blob-URL>; порядок вставки = порядок давности
+  function evictBlobs() {
+    while (blobCache.size > BLOB_CACHE_MAX) {
+      const oldest = blobCache.keys().next().value;
+      const pending = blobCache.get(oldest);
+      blobCache.delete(oldest);
+      pending.then((url) => URL.revokeObjectURL(url), () => {});
     }
-    return blobCache.get(src);
+  }
+  function loadBlob(src) {
+    if (blobCache.has(src)) {                       // попадание: помечаем запись как «свежую»
+      const hit = blobCache.get(src);
+      blobCache.delete(src);
+      blobCache.set(src, hit);
+      return hit;
+    }
+    const p = fetch(src, { headers: { 'ngrok-skip-browser-warning': '1' } })
+      .then((r) => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then((b) => {
+        if (!b.type.startsWith('image/')) throw new Error('not an image');
+        return URL.createObjectURL(b);
+      })
+      .catch((e) => { if (blobCache.get(src) === p) blobCache.delete(src); throw e; });
+    blobCache.set(src, p);
+    evictBlobs();
+    return p;
   }
 
   // Ленивая загрузка: качаем картинку, только когда плитка подъезжает к экрану
@@ -529,9 +587,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     if (!src) return el('div', { class: 'ph', text: '🥤' });
     const img = el('img', { alt, decoding: 'async' });
     const fail = () => img.replaceWith(el('div', { class: 'ph', text: '🥤' }));
+    let retried = false;
     img._load = () => loadBlob(src).then((url) => { img.src = url; }, fail);
-    img.addEventListener('error', fail);
-    if (imgObserver) imgObserver.observe(img); else img._load();
+    img.addEventListener('error', () => {
+      // blob-URL мог быть освобождён при вытеснении из кеша — один раз качаем заново
+      if (!retried && blobCache.get(src) === undefined) { retried = true; img._load(); } else fail();
+    });
+    if (imgObserver) imgObserver.observe(img); else img._load();   // ленивая загрузка у границы экрана
     return img;
   }
 
