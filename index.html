@@ -169,6 +169,25 @@ nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-wi
 .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
 
+/* ── достижения ── */
+.ach-list { display: flex; flex-direction: column; gap: 10px; }
+.ach { position: relative; display: flex; align-items: flex-start; gap: 14px; padding: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+.ach .body { flex: 1; min-width: 0; }
+.ach h3 { margin: 0; font-size: 15px; font-weight: 700; line-height: 1.25; }
+.ach p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.ach .prog { margin-top: 10px; }
+.ach .prog .line { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.ach .date { margin-top: 8px; font-size: 12px; color: var(--accent); }
+.ach.zero { opacity: .5; }                                   /* не начато: без цвета */
+.ach.part { opacity: .5; border-color: rgba(166,255,0,.4); }  /* в процессе: акцент + прогресс-бар */
+.ach.done { border-color: var(--accent); background: linear-gradient(135deg, rgba(166,255,0,.14), var(--card) 65%); }
+.ach.done .body { padding-right: 26px; }
+.ach .badge { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #000; display: flex; align-items: center; justify-content: center; }
+.ach .badge svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.6;
+  stroke-linecap: round; stroke-linejoin: round; }
+
 /* матрица активности: неделя / месяц / 3 месяца — календари, год — сетка в стиле GitHub */
 .heat-months { display: grid; grid-template-columns: repeat(var(--cols, 13), 1fr); gap: 3px; height: 14px; margin-bottom: 4px; }
 .heat-months span { font-size: 10px; line-height: 14px; color: var(--muted); white-space: nowrap; }
@@ -310,6 +329,15 @@ nav svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-wi
 .modal.sheet { max-width: 380px; gap: 12px; }
 .modal .sheet-t { font-size: 18px; margin-right: 32px; }
 /* окно с инструкцией перед съёмкой */
+/* GIF при получении особого достижения: только анимация по центру, плавное появление и исчезновение */
+.gif-pop { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(0,0,0,.8); backdrop-filter: blur(6px); opacity: 0; transition: opacity .35s ease; }
+.gif-pop.in { opacity: 1; }
+.gif-pop img { display: block; max-width: min(88vw, 520px); max-height: 72vh; border-radius: 20px; user-select: none;
+  box-shadow: 0 24px 70px rgba(0,0,0,.65); opacity: 0; transform: scale(.88);
+  transition: opacity .35s ease, transform .5s cubic-bezier(.2,.9,.3,1.15); }
+.gif-pop.in img { opacity: 1; transform: scale(1); }
+@media (prefers-reduced-motion: reduce) { .gif-pop, .gif-pop img { transition-duration: .01s; } }
 .modal.instr .sheet-t { color: #FFFFFF; line-height: 1.25; }
 .instr-pic { display: flex; align-items: center; justify-content: center; overflow: hidden;
   background: #191a1c; border-radius: 16px; max-height: 46vh; }
@@ -417,10 +445,15 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
     camera: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    achievements: '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>',
+  };
+  const ACH_ICONS = {
+    check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   };
   const TABS = [
     { id: 'collection', label: 'Коллекция' },
     { id: 'search', label: 'Поиск' },
+    { id: 'achievements', label: 'Достижения' },
     { id: 'profile', label: 'Профиль' },
   ];
 
@@ -485,7 +518,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   // ── Кеш ответов API (в памяти) ──
   // GET /api/collection, /api/catalog, /api/wishlist, /api/me отдаются из кеша, пока данные «свежие» (API_TTL):
   // переключение вкладок не ходит в сеть. Любое изменение данных (PUT/POST/DELETE) сбрасывает весь кеш.
-  const CACHEABLE = new Set(['/api/collection', '/api/catalog', '/api/wishlist', '/api/me']);
+  const CACHEABLE = new Set(['/api/collection', '/api/catalog', '/api/wishlist', '/api/me', '/api/achievements']);
   const API_TTL = 2 * 60 * 1000;                         // мс; дальше данные считаются устаревшими
   const apiCache = new Map();                            // path -> { t, data }
   const apiInflight = new Map();                         // path -> Promise: два одинаковых запроса сразу — одна загрузка
@@ -515,12 +548,129 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       return p.then(cloneData);                          // views получают копию и не могут испортить кеш
     }
     try {
-      return await request(path, opts);
+      const res = await request(path, opts);
+      announceAchievements(res);
+      return res;
     } finally {
       // изменения (и неудачные тоже: после 404/409 состояние на сервере могло отличаться) → кеш недействителен.
       // Поиск по фото данные не меняет.
       if (path !== '/api/search-by-photo') invalidateApiCache();
     }
+  }
+
+  // GIF-анимации при получении особых достижений: id достижения → файл
+  const ACHIEVEMENT_GIFS = {
+    lando: '/static/images/lando.gif',
+    vr46: '/static/images/vr46.gif',
+    hamilton: '/static/images/lewis-hamilton.gif',
+    litvin: '/static/images/litvin.gif',
+  };
+
+  // Длительность одного прохода GIF (мс) — сумма задержек кадров из самого файла
+  function gifDurationMs(buf) {
+    const u = new Uint8Array(buf);
+    if (u.length < 14 || u[0] !== 0x47 || u[1] !== 0x49 || u[2] !== 0x46) return 0;
+    let pos = 13;
+    if (u[10] & 0x80) pos += 3 * (1 << ((u[10] & 7) + 1));              // глобальная палитра
+    const skip = (i) => { while (i < u.length && u[i] !== 0) i += u[i] + 1; return i + 1; };
+    let total = 0;
+    while (pos < u.length) {
+      const t = u[pos];
+      if (t === 0x21) {                                                    // расширение
+        if (u[pos + 1] === 0xF9) total += (u[pos + 4] | (u[pos + 5] << 8)) * 10;   // задержка кадра, 1/100 с
+        pos = skip(pos + 2);
+      } else if (t === 0x2C) {                                             // кадр
+        const flags = u[pos + 9];
+        pos += 10;
+        if (flags & 0x80) pos += 3 * (1 << ((flags & 7) + 1));            // локальная палитра
+        pos = skip(pos + 1);
+      } else break;                                                        // 0x3B — конец файла
+    }
+    return total;
+  }
+  // GIF грузятся в фоне заранее (одним запросом: из тех же байтов и blob-URL, и длительность). В момент показа
+  // ничего не ждём: готовый GIF открывается из памяти, а если не успел загрузиться — сразу по обычному URL
+  // с фиксированным таймером автозакрытия.
+  const gifStore = new Map();                             // src -> { url, ms }
+  const gifLoading = new Map();
+  function preloadGif(src) {
+    if (gifStore.has(src)) return Promise.resolve(gifStore.get(src));
+    if (gifLoading.has(src)) return gifLoading.get(src);
+    const p = fetch(src, { headers: { 'ngrok-skip-browser-warning': '1' } })
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then((buf) => {
+        let ms = 0;
+        try { ms = gifDurationMs(buf); } catch (e) {}
+        const info = { url: URL.createObjectURL(new Blob([buf], { type: 'image/gif' })), ms };
+        gifStore.set(src, info);
+        return info;
+      })
+      .finally(() => gifLoading.delete(src));
+    p.catch(() => {});
+    gifLoading.set(src, p);
+    return p;
+  }
+  function preloadAllGifs() {                             // по одному и в простое, чтобы не мешать интерфейсу
+    const queue = Object.values(ACHIEVEMENT_GIFS);
+    const step = () => {
+      const src = queue.shift();
+      if (!src) return;
+      preloadGif(src).catch(() => {}).then(() => setTimeout(step, 300));
+    };
+    step();
+  }
+
+  // Окно с GIF: только анимация по центру, без текста и кнопок. Плавно появляется,
+  // после одного прохода GIF (или по тапу) так же плавно исчезает. Живёт отдельно от обычных окон.
+  function playAchievementGif(a, { url, ms }, onDone, onFail) {
+    const img = el('img', { src: url, alt: a.title, draggable: 'false' });
+    const box = el('div', { class: 'gif-pop', role: 'img', 'aria-label': 'Новое достижение: ' + a.title }, img);
+    let closed = false, timer = null;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      clearTimeout(timer);
+      box.classList.remove('in');
+      setTimeout(() => { box.remove(); if (onDone) onDone(); }, 450);
+    };
+    // таймер автозакрытия стартует, когда GIF реально показан: длительность из файла или 4 с, если она неизвестна
+    const arm = () => { if (!timer && !closed) timer = setTimeout(close, Math.min(Math.max(ms || 4000, 1800), 8000) + 350); };
+    img.addEventListener('load', arm);
+    img.addEventListener('error', () => {                 // не загрузился: убираем окно и сообщаем обычным тостом
+      if (closed) return;
+      closed = true;
+      box.remove();
+      if (onFail) onFail(); else if (onDone) onDone();
+    });
+    box.addEventListener('click', close);
+    document.body.append(box);
+    void box.offsetWidth;                                  // фиксируем начальное состояние, чтобы сработала анимация
+    box.classList.add('in');
+    hapticOk();
+    if (img.complete && img.naturalWidth) arm();
+  }
+
+  // Сервер возвращает new_achievements в ответах на изменение коллекции/вишлиста.
+  // Достижение с GIF показывается сразу; обычные — тостом с небольшой задержкой, чтобы не затереть «Добавлено…»
+  function announceAchievements(res) {
+    const list = res && Array.isArray(res.new_achievements) ? res.new_achievements : [];
+    if (!list.length) return;
+    const showToast = (arr) => {
+      hapticOk();
+      toast((arr.length > 1 ? 'Новые достижения: ' : 'Новое достижение: ') + arr.map((a) => a.title).join(', '));
+    };
+    const specials = list.filter((a) => ACHIEVEMENT_GIFS[a.id]);
+    const rest = list.filter((a) => !ACHIEVEMENT_GIFS[a.id]);
+    if (!specials.length) { setTimeout(() => showToast(list), 1300); return; }
+    // несколько особых достижений сразу — показываем GIF по очереди; обычные идут тостом в конце
+    const next = (i) => {
+      if (i >= specials.length) { if (rest.length) showToast(rest); return; }
+      const src = ACHIEVEMENT_GIFS[specials[i].id];
+      const info = gifStore.get(src) || { url: src, ms: 0 };         // не готов — открываем сразу по обычному URL
+      if (!gifStore.has(src)) preloadGif(src).catch(() => {});         // и догружаем в фоне на будущее
+      playAchievementGif(specials[i], info, () => next(i + 1), () => { showToast([specials[i]]); next(i + 1); });
+    };
+    next(0);
   }
 
   function parseUtc(s) {                                 // сервер отдаёт UTC: 'YYYY-MM-DD HH:MM:SS'
@@ -557,44 +707,87 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   // отдаёт HTML-страницу с предупреждением. Поэтому качаем картинку через fetch()
   // с заголовком ngrok-skip-browser-warning и показываем через blob-URL.
   // Кеш ограничен (LRU): в мобильном WebView blob-URL держат картинки в памяти, поэтому при переполнении
-  // самые давние записи вытесняются, а их URL освобождаются через URL.revokeObjectURL().
-  const BLOB_CACHE_MAX = 80;
+  // самые давние записи вытесняются. Чтобы при быстром скролле не было пиков сборки мусора:
+  //  • освобождение URL (revokeObjectURL) откладывается и идёт небольшими пачками, а не по одному на каждую плитку;
+  //  • скачивания идут через очередь с ограничением параллелизма (BLOB_FETCH_SLOTS), новые плитки — первыми;
+  //  • плитка, уехавшая с экрана до старта загрузки, из очереди выпадает и не качается вовсе.
+  const BLOB_CACHE_MAX = 100;
+  const BLOB_FETCH_SLOTS = 6;
   const blobCache = new Map();                      // src -> Promise<blob-URL>; порядок вставки = порядок давности
+  const blobJobs = new Map();                       // src -> { skips: [fn] } пока загрузка ждёт очереди
+  const blobQueue = [];                             // ждущие загрузки; берём с конца (LIFO): свежие плитки важнее
+  let blobActive = 0;
+  const revokeQueue = [];
+  let revokeTimer = null;
+
+  function flushRevoke() {
+    revokeTimer = null;
+    for (const u of revokeQueue.splice(0, 12)) URL.revokeObjectURL(u);
+    if (revokeQueue.length) revokeTimer = setTimeout(flushRevoke, 150);
+  }
   function evictBlobs() {
     while (blobCache.size > BLOB_CACHE_MAX) {
       const oldest = blobCache.keys().next().value;
       const pending = blobCache.get(oldest);
       blobCache.delete(oldest);
-      pending.then((url) => URL.revokeObjectURL(url), () => {});
+      pending.then((url) => {
+        revokeQueue.push(url);
+        if (!revokeTimer) revokeTimer = setTimeout(flushRevoke, 3000);   // даём картинке, что ещё на экране, спокойно доиграть
+      }, () => {});
     }
   }
-  function loadBlob(src) {
+  function pumpBlobs() {
+    while (blobActive < BLOB_FETCH_SLOTS && blobQueue.length) {
+      const job = blobQueue.pop();
+      const meta = blobJobs.get(job.src);
+      blobJobs.delete(job.src);
+      if (meta && meta.skips.every((f) => f())) {                       // все, кто ждал, уже ушли с экрана
+        if (blobCache.get(job.src) === job.p) blobCache.delete(job.src);
+        job.reject(Object.assign(new Error('skipped'), { skipped: true }));
+        continue;
+      }
+      blobActive++;
+      fetch(job.src, { headers: { 'ngrok-skip-browser-warning': '1' } })
+        .then((r) => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.blob();
+        })
+        .then((b) => {
+          if (!b.type.startsWith('image/')) throw new Error('not an image');
+          return URL.createObjectURL(b);
+        })
+        .then(job.resolve, job.reject)
+        .finally(() => { blobActive--; pumpBlobs(); });
+    }
+  }
+  // skip — необязательная функция «загрузка больше не нужна» (плитка вне экрана); без неё загрузка не отменяется
+  function loadBlob(src, skip) {
     if (blobCache.has(src)) {                       // попадание: помечаем запись как «свежую»
       const hit = blobCache.get(src);
       blobCache.delete(src);
       blobCache.set(src, hit);
+      const meta = blobJobs.get(src);
+      if (meta) meta.skips.push(skip || (() => false));
       return hit;
     }
-    const p = fetch(src, { headers: { 'ngrok-skip-browser-warning': '1' } })
-      .then((r) => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
-      })
-      .then((b) => {
-        if (!b.type.startsWith('image/')) throw new Error('not an image');
-        return URL.createObjectURL(b);
-      })
-      .catch((e) => { if (blobCache.get(src) === p) blobCache.delete(src); throw e; });
+    let resolve, reject;
+    const p = new Promise((a, b) => { resolve = a; reject = b; });
+    p.catch(() => { if (blobCache.get(src) === p) blobCache.delete(src); });
     blobCache.set(src, p);
+    blobJobs.set(src, { skips: [skip || (() => false)] });
+    blobQueue.push({ src, p, resolve, reject });
     evictBlobs();
+    pumpBlobs();
     return p;
   }
 
-  // Ленивая загрузка: качаем картинку, только когда плитка подъезжает к экрану
+  // Ленивая загрузка: качаем картинку, когда плитка подъезжает к экрану
   const imgObserver = 'IntersectionObserver' in window
     ? new IntersectionObserver((entries) => {
         for (const e of entries) {
-          if (e.isIntersecting) { imgObserver.unobserve(e.target); e.target._load(); }
+          const img = e.target;
+          img._vis = e.isIntersecting;
+          if (e.isIntersecting && !img._started) img._load();
         }
       }, { rootMargin: '300px' })
     : null;
@@ -604,7 +797,18 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const img = el('img', { alt, decoding: 'async' });
     const fail = () => img.replaceWith(el('div', { class: 'ph', text: '🥤' }));
     let retried = false;
-    img._load = () => loadBlob(src).then((url) => { img.src = url; }, fail);
+    img._vis = !imgObserver;
+    img._started = false;
+    img._load = () => {
+      img._started = true;
+      loadBlob(src, () => !img._vis || !img.isConnected).then((url) => {
+        img.src = url;
+        if (imgObserver) imgObserver.unobserve(img);
+      }, (e) => {
+        if (e && e.skipped) img._started = false;    // уехала с экрана до старта: загрузим, когда вернётся
+        else fail();
+      });
+    };
     img.addEventListener('error', () => {
       // blob-URL мог быть освобождён при вытеснении из кеша — один раз качаем заново
       if (!retried && blobCache.get(src) === undefined) { retried = true; img._load(); } else fail();
@@ -884,10 +1088,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     if (!items.length) {
       return el('div', {}, head,
         el('div', { class: 'empty' },
-          el('div', { class: 'emoji', text: '🥤' }),
           el('b', { text: 'Пока пусто' }),
-          'Найди вкус через поиск и добавь первую банку.',
-          el('div', {}, el('button', { class: 'pill', text: 'Найти вкус', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
+          el('div', {}, el('button', { class: 'pill', text: 'Добавь первую банку', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
         fab);
     }
     return el('div', { class: 'fab-space' }, head,
@@ -1134,6 +1336,15 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       const fd = new FormData();
       fd.append('file', blob, 'photo.jpg');
       const res = await api('/api/search-by-photo', { method: 'POST', body: fd, signal: ac.signal });
+      if (res.status === 'lit_energy') {
+        // Lit Energy: в коллекцию не добавляется. Первый раз api() уже запустил GIF «Литвина» (new_achievements);
+        // повторный скан — только короткое уведомление
+        clearTimeout(timer);
+        finish();
+        invalidateApiCache();                                  // скрытое достижение теперь должно появиться в списке
+        if (!(res.new_achievements || []).length) toast(res.message || 'Эта банка не добавляется в коллекцию');
+        return;
+      }
       if (res.status !== 'success' || !res.item) {
         // несколько банок или банка не найдена: показываем подсказку сервера
         clearTimeout(timer);
@@ -1250,8 +1461,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       if (!found.length) {
         // первый же ненаход → предлагаем добавить этот вкус в каталог
         list.replaceChildren(el('div', { class: 'empty' },
-          el('div', { class: 'emoji', text: '🤷' }), el('b', { text: 'Ничего не нашлось' }),
-          'Попробуйте другое слово или часть названия. Если такого вкуса нет в каталоге, предложите и мы его добавим',
+          el('b', { text: 'Ничего не нашлось' }),
+          'Попробуйте ещё раз. Если такого вкуса нет в каталоге, предложите и мы его добавим',
           el('div', {}, el('button', { class: 'pill', type: 'button', text: 'Предложить вкус',
             onclick: () => { input.blur(); openSuggestFlavor({ source: 'text', title: input.value.trim() }); } }))));
         return;
@@ -1489,6 +1700,38 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     return box;
   }
 
+  function achievementsView(d) {
+    const head = el('div', { class: 'top' },
+      el('div', { class: 'left' },
+        el('div', {},
+          el('h1', { text: 'Достижения' }),
+          el('div', { class: 'sub', text: `Получено ${d.unlocked} из ${d.total}` }))));
+
+    const card = (a) => {
+      const done = a.is_unlocked;
+      const part = !done && a.progress > 0;
+      const cls = 'ach ' + (done ? 'done' : part ? 'part' : 'zero');
+      const val = (n) => n + (a.unit || '');
+      return el('article', { class: cls, 'data-id': a.id },
+        el('div', { class: 'body' },
+          el('h3', { text: a.title }),
+          a.description ? el('p', { text: a.description }) : null,
+          part ? el('div', { class: 'prog' },
+            el('div', { class: 'line' }, el('span', { text: `${val(a.progress)} / ${val(a.target)}` })),
+            el('div', { class: 'bar' }, el('i', { style: `width:${Math.min(100, Math.round(a.progress / a.target * 100))}%` }))) : null,
+          !done && !part && a.target > 1
+            ? el('div', { class: 'prog' }, el('div', { class: 'line' }, el('span', { text: `${val(0)} / ${val(a.target)}` })))
+            : null,
+          done && a.unlocked_at ? el('div', { class: 'date', text: 'Получено ' + fmtDate(a.unlocked_at) }) : null),
+        done ? el('div', { class: 'badge', 'aria-label': 'Выполнено', html: ACH_ICONS.check }) : null);
+    };
+
+    if (!d.items.length) {
+      return el('div', {}, head, el('div', { class: 'empty' }, el('b', { text: 'Пока нет достижений' })));
+    }
+    return el('div', {}, head, el('div', { class: 'ach-list' }, d.items.map(card)));
+  }
+
   function profileView(col, cat) {
     const items = col.items;
     const stats = col.stats;
@@ -1570,7 +1813,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         file = null;
         if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
         prev.hidden = true; prev.replaceChildren();
-        pick.textContent = '📎 Прикрепить фото (необязательно)';
+        pick.textContent = 'Прикрепить фото (необязательно)';
         errEl.textContent = '';
       };
       clearFile();
@@ -1710,9 +1953,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: goBack }),
         el('h1', { text: 'Настройки' }))),
       me.is_admin
-        ? settingRow('🛠️', 'Админ-панель', 'Предложения вкусов и идеи', () => { haptic(); goSub('admin'); }, pend.flavors + pend.dev)
+        ? settingRow('Админ-панель', 'Предложения вкусов и идеи', () => { haptic(); goSub('admin'); }, pend.flavors + pend.dev)
         : null,
-      settingRow('💡', 'Есть идеи по разработке?', 'Отправить идею или отзыв разработчику', openDevIdea),
+      settingRow('Есть идеи по разработке?', 'Отправить идею или отзыв разработчику', openDevIdea),
       el('section', { class: 'card' },
         el('div', { class: 'card-title' }, el('h2', { text: 'Язык' }), el('span', { class: 'soon', text: 'скоро' })),
         stubSegment([{ id: 'ru', label: 'RU' }, { id: 'en', label: 'EN' }, { id: 'uk', label: 'UK' }], 'ru', 'Смена языка скоро появится')),
@@ -1837,6 +2080,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       } else if (state.tab === 'profile') {
         const [col, cat] = await Promise.all([api('/api/collection'), api('/api/catalog')]);
         view = profileView(col, cat);
+      } else if (state.tab === 'achievements') {
+        view = achievementsView(await api('/api/achievements'));
       } else if (state.tab === 'search') {
         view = searchView(await api('/api/catalog'));
       } else if (state.sub === 'catalog') {
@@ -1856,6 +2101,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   }
 
   render();
+  // заранее грузим GIF достижений, чтобы показать их мгновенно
+  setTimeout(preloadAllGifs, 1500);
 })();
 </script>
 </body>

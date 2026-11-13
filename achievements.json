@@ -1,0 +1,161 @@
+{
+  "achievements": [
+    {
+      "id": "litvin",
+      "title": "Больше ли тебе стольки ли лет?",
+      "type": "manual",
+      "hidden": true
+    },
+    {
+      "id": "first_can",
+      "title": "Первый шаг",
+      "description": "Добавить в коллекцию свою первую банку",
+      "type": "collection_count",
+      "target": 1
+    },
+    {
+      "id": "wishlist_1",
+      "title": "Мечтать не вредно",
+      "description": "Первая банка в вишлисте ",
+      "type": "wishlist_count",
+      "target": 1
+    },
+    {
+      "id": "wish_to_col",
+      "title": "Мечты сбываются",
+      "description": "Попробовать любой вкус из вишлиста",
+      "type": "moved_from_wishlist_count",
+      "target": 1
+    },
+    {
+      "id": "ultra_white_10",
+      "title": "Серьёзно?",
+      "description": "Поставить Monster Ultra White оценку 10",
+      "type": "flavor_rating",
+      "flavor": "Ultra White",
+      "rating": 10
+    },
+    {
+      "id": "five_tens",
+      "title": "Неплохо",
+      "description": "Поставить пяти разным вкусам оценку 10",
+      "type": "ratings_count_by_value",
+      "rating": 10,
+      "target": 5
+    },
+    {
+      "id": "rehab_all",
+      "title": "Чаёк?",
+      "description": "Попробовать любой вкус из категории Monster Rehab",
+      "type": "category_min_count",
+      "category": "Rehab",
+      "target": 1
+    },
+    {
+      "id": "nitro_all",
+      "title": "Это что то с нид фор спида?",
+      "description": "Попробовать любой вкус из категории Monster Nitro",
+      "type": "category_min_count",
+      "category": "Nitro",
+      "target": 1
+    },
+    {
+      "id": "beast_one",
+      "title": "Это не Рево!",
+      "description": "Попробовать хотя бы один вкус из категории The Beast Unleashed ",
+      "type": "category_min_count",
+      "category": "The Beast Unleashed",
+      "target": 1
+    },
+    {
+      "id": "wishlist_10",
+      "title": "Планы на зарплату",
+      "description": "Добавить в вишлист более 10 банок ",
+      "type": "wishlist_count",
+      "target": 10
+    },
+    {
+      "id": "shelf_10",
+      "title": "Места на полке еще есть",
+      "description": "10 вкусов в коллекции ",
+      "type": "collection_count",
+      "target": 10
+    },
+    {
+      "id": "all_lines",
+      "title": "Всеядный",
+      "description": "Попробовать хотя бы по одному вкусу из каждой категории",
+      "type": "all_categories_min_one"
+    },
+    {
+      "id": "vr46",
+      "title": "Valentino Rossi (VR46)",
+      "description": "Попробовать оба вкуса VR46",
+      "type": "specific_flavors",
+      "flavors": [
+        "VR46"
+      ]
+    },
+    {
+      "id": "fan",
+      "title": "Фанат",
+      "description": "Попробовать все вкусы категории Celebrity Collabs",
+      "type": "category_complete",
+      "category": "Celebrity Collabs"
+    },
+    {
+      "id": "catalog_half",
+      "title": "Половина зарплаты",
+      "description": "Собрать половину всех вкусов",
+      "type": "catalog_percentage",
+      "target": 50
+    },
+    {
+      "id": "java_all",
+      "title": "Сон для слабых",
+      "description": "Собрать все вкусы категории Java",
+      "type": "category_complete",
+      "category": "Java"
+    },
+    {
+      "id": "lando",
+      "title": "Lando",
+      "description": "Собрать все вкусы Lando Norris",
+      "type": "specific_flavors",
+      "flavors": [
+        "Lando Norris"
+      ]
+    },
+    {
+      "id": "hamilton",
+      "title": "Hamilton",
+      "description": "Собрать вкусы с Льюисом Хэмилтоном ",
+      "type": "specific_flavors",
+      "flavors": [
+        "Lh44",
+        "Full Throttle"
+      ]
+    },
+    {
+      "id": "juice_all",
+      "title": "Соковыжималка",
+      "description": "Собрать все вкусы категории Monster Juice",
+      "type": "category_complete",
+      "category": "Juice"
+    },
+    {
+      "id": "shelf_25",
+      "title": "Мне нужна вторая полка",
+      "description": "25 вкусов в коллекции",
+      "type": "collection_count",
+      "target": 25
+    },
+    {
+      "id": "beast_all",
+      "title": "Задача со большой звёздочкой",
+      "description": "Собрать все вкусы Beast Unleashed",
+      "type": "category_complete",
+      "category": "The Beast Unleashed"
+    }
+  ]
+}
