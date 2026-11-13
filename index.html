@@ -63,7 +63,6 @@ h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.3px; }
 
 /* ── пустые состояния, загрузка, ошибки ── */
 .empty { text-align: center; color: var(--muted); padding: 56px 24px; line-height: 1.5; }
-.empty .emoji { font-size: 44px; margin-bottom: 10px; }
 .empty b { color: var(--text); display: block; font-size: 17px; margin-bottom: 6px; }
 .empty .pill { margin-top: 16px; }
 .skel { background: linear-gradient(90deg, var(--card), #232323, var(--card)); background-size: 200% 100%;
@@ -793,9 +792,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     : null;
 
   function canImg(src, alt) {
-    if (!src) return el('div', { class: 'ph', text: '🥤' });
+    if (!src) return el('div', { class: 'ph' });
     const img = el('img', { alt, decoding: 'async' });
-    const fail = () => img.replaceWith(el('div', { class: 'ph', text: '🥤' }));
+    const fail = () => img.replaceWith(el('div', { class: 'ph' }));
     let retried = false;
     img._vis = !imgObserver;
     img._started = false;
@@ -982,7 +981,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         done(okMsg);
       } catch (e) {
         busy = false;
-        errEl.textContent = '⚠️ ' + (e.message || failMsg);
+        errEl.textContent = e.message || failMsg;
         sync();
       }
     }
@@ -1089,7 +1088,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       return el('div', {}, head,
         el('div', { class: 'empty' },
           el('b', { text: 'Пока пусто' }),
-          el('div', {}, el('button', { class: 'pill', text: 'Добавь первую банку', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
+          el('div', {}, el('button', { class: 'pill', text: 'Добавить первую банку', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
         fab);
     }
     return el('div', { class: 'fab-space' }, head,
@@ -1112,10 +1111,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     if (!d.items.length) {
       return el('div', {}, head,
         el('div', { class: 'empty' },
-          el('div', { class: 'emoji', text: '🔖' }),
           el('b', { text: 'Вишлист пуст' }),
           'Найди вкус через поиск и добавь его сюда, чтобы не забыть попробовать.',
-          el('div', {}, el('button', { class: 'pill', text: 'Найти вкус', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))));
+          el('div', {}, el('button', { class: 'pill', text: 'Добавить первую банку', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))));
     }
     return el('div', {}, head,
       el('div', { class: 'note', style: 'margin:-6px 2px 14px', text: 'Нажмите на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.' }),
@@ -1829,7 +1827,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
           el('img', { src: previewUrl, alt: 'Выбранное фото' }),
           el('button', { type: 'button', 'aria-label': 'Убрать фото', text: '✕', onclick: () => { if (!busy) { clearFile(); sync(); } } }));
         prev.hidden = false;
-        pick.textContent = '📎 Заменить фото';
+        pick.textContent = 'Заменить фото';
         sync();                                          // фото прикреплено — кнопка «Отправить» включается сразу
       });
       attachBox = el('div', { class: 'attach' }, fileInput, pick, prev);
@@ -1857,7 +1855,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         if (onDone) onDone();
       } catch (e) {
         busy = false;
-        errEl.textContent = '⚠️ ' + (e.message || 'Не удалось отправить');
+        errEl.textContent = e.message || 'Не удалось отправить';
         sync();
       }
     }
@@ -1929,9 +1927,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     render();
   }
 
-  function settingRow(icon, title, subtitle, onclick, count) {
+  function settingRow(title, subtitle, onclick, count) {
     return el('button', { class: 'srow', type: 'button', onclick },
-      el('span', { text: icon, 'aria-hidden': 'true' }),
       el('div', { class: 'st' }, el('b', { text: title }), subtitle ? el('small', { text: subtitle }) : null),
       count > 0 ? el('span', { class: 'cnt', text: String(count) }) : null,
       el('span', { class: 'chev', text: '›', 'aria-hidden': 'true' }));
@@ -2031,7 +2028,6 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function errorView(err) {
     return el('div', { class: 'empty' },
-      el('div', { class: 'emoji', text: '⚠️' }),
       el('b', { text: 'Не удалось загрузить' }),
       err.message || 'Что-то пошло не так.',
       el('div', {}, el('button', { class: 'pill', text: 'Повторить', onclick: () => render() })));
