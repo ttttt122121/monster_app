@@ -11,21 +11,51 @@
       "title": "Первый шаг",
       "description": "Добавить в коллекцию свою первую банку",
       "type": "collection_count",
-      "target": 1
+      "target": 1,
+      "i18n": {
+        "ua": {
+          "title": "Перший крок",
+          "description": "Додай до колекції свою першу банку"
+        },
+        "en": {
+          "title": "First Step",
+          "description": "Add your first can to the collection"
+        }
+      }
     },
     {
       "id": "wishlist_1",
       "title": "Мечтать не вредно",
       "description": "Первая банка в вишлисте ",
       "type": "wishlist_count",
-      "target": 1
+      "target": 1,
+      "i18n": {
+        "ua": {
+          "title": "Мріяти не шкідливо",
+          "description": "Перша банка у вішлісті"
+        },
+        "en": {
+          "title": "Dream On",
+          "description": "Your first can on the wishlist"
+        }
+      }
     },
     {
       "id": "wish_to_col",
       "title": "Мечты сбываются",
       "description": "Попробовать любой вкус из вишлиста",
       "type": "moved_from_wishlist_count",
-      "target": 1
+      "target": 1,
+      "i18n": {
+        "ua": {
+          "title": "Мрії збуваються",
+          "description": "Спробуй будь-який смак зі свого вішліста"
+        },
+        "en": {
+          "title": "Dreams Come True",
+          "description": "Try any flavor from your wishlist"
+        }
+      }
     },
     {
       "id": "ultra_white_10",
@@ -33,7 +63,17 @@
       "description": "Поставить Monster Ultra White оценку 10",
       "type": "flavor_rating",
       "flavor": "Ultra White",
-      "rating": 10
+      "rating": 10,
+      "i18n": {
+        "ua": {
+          "title": "Серйозно?",
+          "description": "Постав Monster Ultra White 10 із 10"
+        },
+        "en": {
+          "title": "Seriously?",
+          "description": "Rate Monster Ultra White 10/10"
+        }
+      }
     },
     {
       "id": "five_tens",
@@ -41,7 +81,17 @@
       "description": "Поставить пяти разным вкусам оценку 10",
       "type": "ratings_count_by_value",
       "rating": 10,
-      "target": 5
+      "target": 5,
+      "i18n": {
+        "ua": {
+          "title": "Непогано",
+          "description": "Постав десятку п’яти різним смакам"
+        },
+        "en": {
+          "title": "Not Bad",
+          "description": "Give five different flavors a 10"
+        }
+      }
     },
     {
       "id": "rehab_all",
@@ -49,7 +99,17 @@
       "description": "Попробовать любой вкус из категории Monster Rehab",
       "type": "category_min_count",
       "category": "Rehab",
-      "target": 1
+      "target": 1,
+      "i18n": {
+        "ua": {
+          "title": "Чаєк?",
+          "description": "Спробуй будь-який смак Monster Rehab"
+        },
+        "en": {
+          "title": "Tea Time?",
+          "description": "Try any Monster Rehab flavor"
+        }
+      }
     },
     {
       "id": "nitro_all",
@@ -57,7 +117,17 @@
       "description": "Попробовать любой вкус из категории Monster Nitro",
       "type": "category_min_count",
       "category": "Nitro",
-      "target": 1
+      "target": 1,
+      "i18n": {
+        "ua": {
+          "title": "Це щось із Need for Speed?",
+          "description": "Спробуй будь-який смак Monster Nitro"
+        },
+        "en": {
+          "title": "Is This From Need for Speed?",
+          "description": "Try any Monster Nitro flavor"
+        }
+      }
     },
     {
       "id": "beast_one",
@@ -65,27 +135,67 @@
       "description": "Попробовать хотя бы один вкус из категории The Beast Unleashed ",
       "type": "category_min_count",
       "category": "The Beast Unleashed",
-      "target": 1
+      "target": 1,
+      "i18n": {
+        "ua": {
+          "title": "Це не Revo!",
+          "description": "Спробуй хоча б один смак The Beast Unleashed"
+        },
+        "en": {
+          "title": "This Isn’t Revo!",
+          "description": "Try at least one The Beast Unleashed flavor"
+        }
+      }
     },
     {
       "id": "wishlist_10",
       "title": "Планы на зарплату",
       "description": "Добавить в вишлист более 10 банок ",
       "type": "wishlist_count",
-      "target": 10
+      "target": 10,
+      "i18n": {
+        "ua": {
+          "title": "Плани на зарплату",
+          "description": "Додай до вішліста понад 10 банок"
+        },
+        "en": {
+          "title": "Payday Plans",
+          "description": "Put more than 10 cans on your wishlist"
+        }
+      }
     },
     {
       "id": "shelf_10",
       "title": "Места на полке еще есть",
       "description": "10 вкусов в коллекции ",
       "type": "collection_count",
-      "target": 10
+      "target": 10,
+      "i18n": {
+        "ua": {
+          "title": "Місце на полиці ще є",
+          "description": "10 смаків у колекції"
+        },
+        "en": {
+          "title": "Room on the Shelf",
+          "description": "10 flavors in your collection"
+        }
+      }
     },
     {
       "id": "all_lines",
       "title": "Всеядный",
       "description": "Попробовать хотя бы по одному вкусу из каждой категории",
-      "type": "all_categories_min_one"
+      "type": "all_categories_min_one",
+      "i18n": {
+        "ua": {
+          "title": "Всеїдний",
+          "description": "Спробуй хоча б по одному смаку з кожної категорії"
+        },
+        "en": {
+          "title": "Try Everything",
+          "description": "Try at least one flavor from every category"
+        }
+      }
     },
     {
       "id": "vr46",
@@ -94,28 +204,68 @@
       "type": "specific_flavors",
       "flavors": [
         "VR46"
-      ]
+      ],
+      "i18n": {
+        "ua": {
+          "title": "Valentino Rossi (VR46)",
+          "description": "Спробуй обидва смаки VR46"
+        },
+        "en": {
+          "title": "Valentino Rossi (VR46)",
+          "description": "Try both VR46 flavors"
+        }
+      }
     },
     {
       "id": "fan",
       "title": "Фанат",
       "description": "Попробовать все вкусы категории Celebrity Collabs",
       "type": "category_complete",
-      "category": "Celebrity Collabs"
+      "category": "Celebrity Collabs",
+      "i18n": {
+        "ua": {
+          "title": "Фанат",
+          "description": "Спробуй усі смаки Celebrity Collabs"
+        },
+        "en": {
+          "title": "Superfan",
+          "description": "Try every Celebrity Collabs flavor"
+        }
+      }
     },
     {
       "id": "catalog_half",
       "title": "Половина зарплаты",
       "description": "Собрать половину всех вкусов",
       "type": "catalog_percentage",
-      "target": 50
+      "target": 50,
+      "i18n": {
+        "ua": {
+          "title": "Пів зарплати",
+          "description": "Збери половину всіх смаків"
+        },
+        "en": {
+          "title": "Half a Paycheck",
+          "description": "Collect half of all flavors"
+        }
+      }
     },
     {
       "id": "java_all",
       "title": "Сон для слабых",
       "description": "Собрать все вкусы категории Java",
       "type": "category_complete",
-      "category": "Java"
+      "category": "Java",
+      "i18n": {
+        "ua": {
+          "title": "Сон для слабаків",
+          "description": "Збери всі смаки Java"
+        },
+        "en": {
+          "title": "Sleep Is for the Weak",
+          "description": "Collect every Java flavor"
+        }
+      }
     },
     {
       "id": "lando",
@@ -124,7 +274,17 @@
       "type": "specific_flavors",
       "flavors": [
         "Lando Norris"
-      ]
+      ],
+      "i18n": {
+        "ua": {
+          "title": "Lando",
+          "description": "Збери всі смаки Lando Norris"
+        },
+        "en": {
+          "title": "Lando",
+          "description": "Collect every Lando Norris flavor"
+        }
+      }
     },
     {
       "id": "hamilton",
@@ -134,28 +294,68 @@
       "flavors": [
         "Lh44",
         "Full Throttle"
-      ]
+      ],
+      "i18n": {
+        "ua": {
+          "title": "Hamilton",
+          "description": "Збери смаки з Льюїсом Гемілтоном"
+        },
+        "en": {
+          "title": "Hamilton",
+          "description": "Collect the Lewis Hamilton flavors"
+        }
+      }
     },
     {
       "id": "juice_all",
       "title": "Соковыжималка",
       "description": "Собрать все вкусы категории Monster Juice",
       "type": "category_complete",
-      "category": "Juice"
+      "category": "Juice",
+      "i18n": {
+        "ua": {
+          "title": "Соковижималка",
+          "description": "Збери всі смаки Monster Juice"
+        },
+        "en": {
+          "title": "Juicer",
+          "description": "Collect every Monster Juice flavor"
+        }
+      }
     },
     {
       "id": "shelf_25",
       "title": "Мне нужна вторая полка",
       "description": "25 вкусов в коллекции",
       "type": "collection_count",
-      "target": 25
+      "target": 25,
+      "i18n": {
+        "ua": {
+          "title": "Потрібна друга полиця",
+          "description": "25 смаків у колекції"
+        },
+        "en": {
+          "title": "Time for a Second Shelf",
+          "description": "25 flavors in your collection"
+        }
+      }
     },
     {
       "id": "beast_all",
       "title": "Задача со большой звёздочкой",
       "description": "Собрать все вкусы Beast Unleashed",
       "type": "category_complete",
-      "category": "The Beast Unleashed"
+      "category": "The Beast Unleashed",
+      "i18n": {
+        "ua": {
+          "title": "Завдання із зірочкою",
+          "description": "Збери всі смаки The Beast Unleashed"
+        },
+        "en": {
+          "title": "Challenge Accepted",
+          "description": "Collect every The Beast Unleashed flavor"
+        }
+      }
     }
   ]
 }

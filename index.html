@@ -435,6 +435,440 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   const main = document.getElementById('main');
   const nav = document.getElementById('nav');
+  /* ── Локализация (ru / ua / en) ──
+     Ключ словаря — русский текст, он же и есть русская версия: для ru словарь пустой. В ua и en лежат переводы.
+     Подстановки в тексте записываются как {0}, {1}. Нет перевода — показывается русский ключ (ничего не ломается).
+     Язык хранится на сервере (GET/PUT /api/settings) и общий с Telegram-ботом. */
+  const I18N = {
+    ru: {},
+    ua: {
+      "Коллекционер вкусов": "Колекціонер смаків",
+      "Коллекция": "Колекція",
+      "Поиск": "Пошук",
+      "Достижения": "Досягнення",
+      "Профиль": "Профіль",
+      "Вишлист": "Вішліст",
+      "Моя коллекция": "Моя колекція",
+      "Назад": "Назад",
+      "Закрыть": "Закрити",
+      "Отмена": "Скасувати",
+      "Отправить": "Надіслати",
+      "Повторить": "Повторити",
+      "Очистить": "Очистити",
+      "Ошибка ": "Помилка ",
+      "Что-то пошло не так.": "Щось пішло не так.",
+      "Не удалось загрузить": "Не вдалося завантажити",
+      "Загрузка…": "Завантаження…",
+      "Выполнено": "Готово",
+      "Новое достижение: ": "Нове досягнення: ",
+      "Новые достижения: ": "Нові досягнення: ",
+      "Получено {0} из {1}": "Отримано {0} із {1}",
+      "Получено ": "Отримано ",
+      "Пока нет достижений": "Досягнень поки немає",
+      "Оценка ": "Оцінка ",
+      " из 10": " з 10",
+      "Ваша оценка": "Ваша оцінка",
+      "Оценка от 1 до 10": "Оцінка від 1 до 10",
+      "Добавить в коллекцию": "Додати до колекції",
+      "Перенести в коллекцию": "Перенести до колекції",
+      "Изменить оценку": "Змінити оцінку",
+      "В вишлист": "До вішліста",
+      "Удалить из коллекции": "Видалити з колекції",
+      "Удалить из вишлиста": "Видалити з вішліста",
+      "Это не тот вкус": "Це не той смак",
+      "Сохранить новую оценку": "Зберегти оцінку",
+      "Оценка не изменена": "Без змін",
+      "Выберите оценку": "Оберіть оцінку",
+      "Подтвердить перенос": "Підтвердити",
+      "Подтвердить добавление": "Підтвердити",
+      "Оценка сохранена": "Оцінку збережено",
+      "Не удалось сохранить": "Не вдалося зберегти",
+      "Перенесено в коллекцию": "Перенесено до колекції",
+      "Не удалось перенести": "Не вдалося перенести",
+      "Добавлено в коллекцию": "Додано до колекції",
+      "Не удалось добавить": "Не вдалося додати",
+      "Добавлено в вишлист": "Додано до вішліста",
+      "Нажмите ещё раз, чтобы удалить": "Натисніть ще раз, щоб видалити",
+      "Удалено из коллекции": "Видалено з колекції",
+      "Удалено из вишлиста": "Видалено з вішліста",
+      "Не удалось удалить": "Не вдалося видалити",
+      "Добавлено: ": "Додано ",
+      "В вишлисте с ": "У вішлісті з ",
+      "В коллекции": "У колекції",
+      "В вишлисте": "У вішлісті",
+      "В коллекции ": "У колекції ",
+      ", в вишлисте": ", у вішлісті",
+      "Собрано {0} из {1}": "Зібрано {0} із {1}",
+      "Все вкусы": "Усі смаки",
+      "Пока пусто": "Тут поки порожньо",
+      "Добавить первую банку": "Додати першу банку",
+      "Хочу попробовать: {0}": "Хочу спробувати: {0}",
+      "Вишлист пуст": "Вішліст порожній",
+      "Найди вкус через поиск и добавь его сюда, чтобы не забыть попробовать.": "Знайди смак у пошуку й додай сюди, щоб не забути спробувати.",
+      "Нажмите на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.": "Натисніть на банку, щоб перенести її до колекції з оцінкою або прибрати з вішліста.",
+      "В коллекции {0} из {1}": "{0} із {1} у колекції",
+      ", в вишлисте {0}": ", {0} у вішлісті",
+      "Каталог пока пуст.": "Каталог поки порожній.",
+      "Нет доступа к камере. Разрешите её в настройках Telegram": "Немає доступу до камери. Увімкніть її в налаштуваннях Telegram",
+      "Камера недоступна на этом устройстве": "Камера недоступна на цьому пристрої",
+      "Камера": "Камера",
+      "Поместите банку в рамку": "Помістіть банку в рамку",
+      "Сделать снимок": "Зробити знімок",
+      "Не удалось сделать снимок": "Не вдалося зробити знімок",
+      "Сделать фото": "Зробити фото",
+      "Сфотографируйте переднюю часть банки": "Сфотографуйте банку спереду",
+      "Как сфотографировать банку": "Як сфотографувати банку",
+      "Распознаю банку": "Розпізнаю банку",
+      "Обычно это занимает несколько секунд": "Зазвичай це кілька секунд",
+      "Эта банка не добавляется в коллекцию": "Цю банку не можна додати до колекції",
+      "Не удалось распознать банку": "Не вдалося розпізнати банку",
+      "Сервер долго отвечает. Попробуйте ещё раз": "Сервер відповідає надто довго. Спробуйте ще раз",
+      "Распознавание отменено": "Розпізнавання скасовано",
+      "Нашли: ": "Знайдено: ",
+      "Название или ключевое слово": "Назва або ключове слово",
+      "Поиск вкуса": "Пошук смаку",
+      "Найдено: {0}": "Знайдено: {0}",
+      "Популярные вкусы": "Популярні смаки",
+      "Ничего не нашлось": "Нічого не знайдено",
+      "Попробуйте ещё раз. Если такого вкуса нет в каталоге, предложите и мы его добавим": "Спробуйте ще раз. Якщо такого смаку немає в каталозі — запропонуйте його, і ми додамо",
+      "Предложить вкус": "Запропонувати смак",
+      "Добавить по фото": "Додати за фото",
+      "Не получается распознать банку? Возможно, этого вкуса ещё нет в каталоге.": "Не вдається розпізнати банку? Можливо, цього смаку ще немає в каталозі.",
+      "Добавлено: {0} {1}": "Додано: {0} {1}",
+      "Текущая неделя: ": "Цей тиждень: ",
+      "Последние 13 недель: {0} – {1}": "Останні 13 тижнів: {0} – {1}",
+      ": ничего не добавлено": ": нічого не додано",
+      "ничего": "нічого",
+      "Активность": "Активність",
+      "Период активности": "Період",
+      "Меньше": "Менше",
+      "Больше": "Більше",
+      "Неделя": "Тиждень",
+      "за неделю": "за тиждень",
+      "Месяц": "Місяць",
+      "за месяц": "за місяць",
+      "3 месяца": "3 місяці",
+      "за 3 месяца": "за 3 місяці",
+      "Год": "Рік",
+      "за год": "за рік",
+      "Пн": "Пн",
+      "Вт": "Вт",
+      "Ср": "Ср",
+      "Чт": "Чт",
+      "Пт": "Пт",
+      "Сб": "Сб",
+      "Вс": "Нд",
+      "янв": "січ",
+      "фев": "лют",
+      "мар": "бер",
+      "апр": "кві",
+      "май": "тра",
+      "июн": "чер",
+      "июл": "лип",
+      "авг": "сер",
+      "сен": "вер",
+      "окт": "жов",
+      "ноя": "лис",
+      "дек": "гру",
+      "Коллекционер": "Колекціонер",
+      "Избранное": "Обране",
+      "Оцени первые банки — здесь появится твой топ-4.": "Оціни перші банки — тут з’явиться твій топ-4.",
+      "Статистика": "Статистика",
+      "средняя оценка": "середня оцінка",
+      "каталога": "каталогу",
+      "Настройки": "Налаштування",
+      "Прикрепить фото (необязательно)": "Додати фото (необов’язково)",
+      "Выберите изображение": "Оберіть зображення",
+      "Выбранное фото": "Вибране фото",
+      "Убрать фото": "Прибрати фото",
+      "Заменить фото": "Замінити фото",
+      "Фото слишком большое (максимум 8 МБ)": "Фото завелике (макс. 8 МБ)",
+      "Не удалось отправить": "Не вдалося надіслати",
+      "Похоже, мы ошиблись. Напишите, какой это вкус, и мы добавим его в каталог.": "Схоже, ми помилилися. Напишіть, що це за смак, і ми додамо його до каталогу.",
+      "Похоже этого вкуса ещё нету. Напишите, какой это вкус, и мы добавим его в каталог.": "Схоже, цього смаку ще немає. Напишіть, що це за смак, і ми додамо його до каталогу.",
+      "Напишите название вкуса, которого нет в каталоге, и мы добавим его.": "Напишіть назву смаку, якого немає в каталозі, і ми його додамо.",
+      "Название вкуса": "Назва смаку",
+      "Например: Monster Ultra Gold": "Наприклад: Monster Ultra Gold",
+      "Спасибо! Предложение отправлено": "Дякуємо! Пропозицію надіслано",
+      "Есть идеи по разработке?": "Є ідеї для застосунку?",
+      "Расскажите, что улучшить или добавить в приложение.": "Розкажіть, що покращити чи додати в застосунку.",
+      "Ваша идея или отзыв": "Ваша ідея або відгук",
+      "Спасибо! Идея отправлена": "Дякуємо! Ідею надіслано",
+      "Админ-панель": "Адмін-панель",
+      "Предложения вкусов и идеи": "Пропозиції смаків та ідеї",
+      "Отправить идею или отзыв разработчику": "Надіслати ідею чи відгук розробнику",
+      "Язык": "Мова",
+      "скоро": "скоро",
+      "Тема оформления": "Тема",
+      "Тёмная": "Темна",
+      "Светлая": "Світла",
+      "Светлая тема скоро появится": "Світла тема з’явиться згодом",
+      "Фото": "Фото",
+      "Не удалось загрузить фото": "Не вдалося завантажити фото",
+      "активных: ": "активних: ",
+      "Пока ничего нет.": "Поки що порожньо.",
+      "Задача закрыта": "Завдання закрито",
+      "Не удалось закрыть задачу": "Не вдалося закрити завдання",
+      "Открыть фото": "Відкрити фото",
+      "Приложенное фото": "Прикріплене фото",
+      "по фото": "за фото",
+      "из поиска": "із пошуку",
+      "Вкусов: {0}, идей: {1}": "Смаків: {0}, ідей: {1}",
+      "Предложения вкусов": "Пропозиції смаків",
+      "Идеи по разработке": "Ідеї щодо розробки",
+      "Некорректные данные Telegram": "Некоректні дані Telegram",
+      "Нет подписи Telegram": "Немає підпису Telegram",
+      "Неверная подпись Telegram": "Невірний підпис Telegram",
+      "Сессия устарела, откройте приложение заново": "Сесія застаріла. Відкрийте застосунок знову",
+      "В данных Telegram нет пользователя": "У даних Telegram немає користувача",
+      "Откройте приложение через Telegram": "Відкрийте застосунок через Telegram",
+      "Доступно только администраторам": "Лише для адміністраторів",
+      "index.html не найден": "index.html не знайдено",
+      "Такого вкуса нет в каталоге": "Такого смаку немає в каталозі",
+      "Этого вкуса нет в вашей коллекции": "Цього смаку немає у вашій колекції",
+      "Этот вкус уже в вашей коллекции": "Цей смак уже у вашій колекції",
+      "Этого вкуса нет в вашем вишлисте": "Цього смаку немає у вашому вішлісті",
+      "Не удалось обработать фото. Попробуйте другое изображение": "Не вдалося обробити фото. Спробуйте інше",
+      "Сервис распознавания перегружен. Попробуйте чуть позже": "Сервіс розпізнавання перевантажений. Спробуйте трохи згодом",
+      "Сервис распознавания временно недоступен": "Розпізнавання тимчасово недоступне",
+      "Распознавание по фото пока не настроено": "Розпізнавання за фото ще не налаштоване",
+      "Файл пустой": "Файл порожній",
+      "Поддерживаются фото JPEG, PNG, WebP и GIF": "Підтримуються JPEG, PNG, WebP і GIF",
+      "Каталог пока пуст": "Каталог поки порожній",
+      "Укажите название вкуса или прикрепите фото": "Вкажіть назву смаку або додайте фото",
+      "Опишите идею или прикрепите фото": "Опишіть ідею або додайте фото",
+      "Задача не найдена или уже закрыта": "Завдання не знайдено або вже закрито",
+      "Слишком много фото подряд. Попробуйте через минуту": "Забагато фото підряд. Спробуйте за хвилину",
+      "Слишком много предложений. Попробуйте позже": "Забагато пропозицій. Спробуйте пізніше",
+      "Слишком много сообщений. Попробуйте позже": "Забагато повідомлень. Спробуйте пізніше",
+      "Обнаружено несколько банок. Пожалуйста, сфотографируйте только одну банку": "Виявлено кілька банок. Сфотографуйте лише одну",
+      "Не удалось определить вкус. Сфотографируйте одну банку крупнее с передней стороны": "Не вдалося визначити смак. Сфотографуйте одну банку ближче, спереду",
+      "собрано из {0}": "зібрано з {0}",
+    },
+    en: {
+      "Коллекционер вкусов": "Flavor Collector",
+      "Коллекция": "Collection",
+      "Поиск": "Search",
+      "Достижения": "Achievements",
+      "Профиль": "Profile",
+      "Вишлист": "Wishlist",
+      "Моя коллекция": "My collection",
+      "Назад": "Back",
+      "Закрыть": "Close",
+      "Отмена": "Cancel",
+      "Отправить": "Send",
+      "Повторить": "Retry",
+      "Очистить": "Clear",
+      "Ошибка ": "Error ",
+      "Что-то пошло не так.": "Something went wrong.",
+      "Не удалось загрузить": "Couldn’t load",
+      "Загрузка…": "Loading…",
+      "Выполнено": "Done",
+      "Новое достижение: ": "Achievement unlocked: ",
+      "Новые достижения: ": "Achievements unlocked: ",
+      "Получено {0} из {1}": "{0} of {1} unlocked",
+      "Получено ": "Unlocked ",
+      "Пока нет достижений": "No achievements yet",
+      "Оценка ": "Rating ",
+      " из 10": " of 10",
+      "Ваша оценка": "Your rating",
+      "Оценка от 1 до 10": "Rating from 1 to 10",
+      "Добавить в коллекцию": "Add to collection",
+      "Перенести в коллекцию": "Move to collection",
+      "Изменить оценку": "Change rating",
+      "В вишлист": "Add to wishlist",
+      "Удалить из коллекции": "Remove from collection",
+      "Удалить из вишлиста": "Remove from wishlist",
+      "Это не тот вкус": "Not this flavor",
+      "Сохранить новую оценку": "Save rating",
+      "Оценка не изменена": "No changes",
+      "Выберите оценку": "Pick a rating",
+      "Подтвердить перенос": "Confirm",
+      "Подтвердить добавление": "Confirm",
+      "Оценка сохранена": "Rating saved",
+      "Не удалось сохранить": "Couldn’t save",
+      "Перенесено в коллекцию": "Moved to collection",
+      "Не удалось перенести": "Couldn’t move it",
+      "Добавлено в коллекцию": "Added to collection",
+      "Не удалось добавить": "Couldn’t add it",
+      "Добавлено в вишлист": "Added to wishlist",
+      "Нажмите ещё раз, чтобы удалить": "Tap again to delete",
+      "Удалено из коллекции": "Removed from collection",
+      "Удалено из вишлиста": "Removed from wishlist",
+      "Не удалось удалить": "Couldn’t delete it",
+      "Добавлено: ": "Added ",
+      "В вишлисте с ": "On wishlist since ",
+      "В коллекции": "In collection",
+      "В вишлисте": "In wishlist",
+      "В коллекции ": "In collection ",
+      ", в вишлисте": ", on wishlist",
+      "Собрано {0} из {1}": "{0} of {1} collected",
+      "Все вкусы": "All flavors",
+      "Пока пусто": "Nothing here yet",
+      "Добавить первую банку": "Add your first can",
+      "Хочу попробовать: {0}": "Want to try: {0}",
+      "Вишлист пуст": "Your wishlist is empty",
+      "Найди вкус через поиск и добавь его сюда, чтобы не забыть попробовать.": "Find a flavor in Search and add it here so you don’t forget to try it.",
+      "Нажмите на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.": "Tap a can to move it to your collection with a rating, or remove it from the wishlist.",
+      "В коллекции {0} из {1}": "{0} of {1} in collection",
+      ", в вишлисте {0}": ", {0} on wishlist",
+      "Каталог пока пуст.": "The catalog is empty.",
+      "Нет доступа к камере. Разрешите её в настройках Telegram": "No camera access. Turn it on in Telegram settings",
+      "Камера недоступна на этом устройстве": "The camera isn’t available on this device",
+      "Камера": "Camera",
+      "Поместите банку в рамку": "Fit the can in the frame",
+      "Сделать снимок": "Take photo",
+      "Не удалось сделать снимок": "Couldn’t take the photo",
+      "Сделать фото": "Take photo",
+      "Сфотографируйте переднюю часть банки": "Photograph the front of the can",
+      "Как сфотографировать банку": "How to photograph the can",
+      "Распознаю банку": "Scanning the can",
+      "Обычно это занимает несколько секунд": "This usually takes a few seconds",
+      "Эта банка не добавляется в коллекцию": "This one can’t be added to your collection",
+      "Не удалось распознать банку": "Couldn’t identify the can",
+      "Сервер долго отвечает. Попробуйте ещё раз": "The server is taking too long. Try again",
+      "Распознавание отменено": "Scan canceled",
+      "Нашли: ": "Found: ",
+      "Название или ключевое слово": "Name or keyword",
+      "Поиск вкуса": "Search flavors",
+      "Найдено: {0}": "Found: {0}",
+      "Популярные вкусы": "Popular flavors",
+      "Ничего не нашлось": "No results",
+      "Попробуйте ещё раз. Если такого вкуса нет в каталоге, предложите и мы его добавим": "Try again. If the flavor isn’t in the catalog, suggest it and we’ll add it",
+      "Предложить вкус": "Suggest a flavor",
+      "Добавить по фото": "Add by photo",
+      "Не получается распознать банку? Возможно, этого вкуса ещё нет в каталоге.": "Can’t identify the can? The flavor may not be in the catalog yet.",
+      "Добавлено: {0} {1}": "{0} {1} added",
+      "Текущая неделя: ": "This week: ",
+      "Последние 13 недель: {0} – {1}": "Last 13 weeks: {0} – {1}",
+      ": ничего не добавлено": ": nothing added",
+      "ничего": "nothing",
+      "Активность": "Activity",
+      "Период активности": "Period",
+      "Меньше": "Less",
+      "Больше": "More",
+      "Неделя": "Week",
+      "за неделю": "this week",
+      "Месяц": "Month",
+      "за месяц": "this month",
+      "3 месяца": "3 months",
+      "за 3 месяца": "last 3 months",
+      "Год": "Year",
+      "за год": "this year",
+      "Пн": "Mon",
+      "Вт": "Tue",
+      "Ср": "Wed",
+      "Чт": "Thu",
+      "Пт": "Fri",
+      "Сб": "Sat",
+      "Вс": "Sun",
+      "янв": "Jan",
+      "фев": "Feb",
+      "мар": "Mar",
+      "апр": "Apr",
+      "май": "May",
+      "июн": "Jun",
+      "июл": "Jul",
+      "авг": "Aug",
+      "сен": "Sep",
+      "окт": "Oct",
+      "ноя": "Nov",
+      "дек": "Dec",
+      "Коллекционер": "Collector",
+      "Избранное": "Favorites",
+      "Оцени первые банки — здесь появится твой топ-4.": "Rate your first cans and your top 4 will show up here.",
+      "Статистика": "Statistics",
+      "средняя оценка": "average rating",
+      "каталога": "of the catalog",
+      "Настройки": "Settings",
+      "Прикрепить фото (необязательно)": "Add a photo (optional)",
+      "Выберите изображение": "Choose an image",
+      "Выбранное фото": "Selected photo",
+      "Убрать фото": "Remove photo",
+      "Заменить фото": "Replace photo",
+      "Фото слишком большое (максимум 8 МБ)": "Photo is too large (8 MB max)",
+      "Не удалось отправить": "Couldn’t send",
+      "Похоже, мы ошиблись. Напишите, какой это вкус, и мы добавим его в каталог.": "Looks like we got it wrong. Tell us which flavor it is and we’ll add it to the catalog.",
+      "Похоже этого вкуса ещё нету. Напишите, какой это вкус, и мы добавим его в каталог.": "Looks like this flavor isn’t in the catalog yet. Tell us what it is and we’ll add it.",
+      "Напишите название вкуса, которого нет в каталоге, и мы добавим его.": "Tell us the name of a flavor that’s missing from the catalog and we’ll add it.",
+      "Название вкуса": "Flavor name",
+      "Например: Monster Ultra Gold": "E.g. Monster Ultra Gold",
+      "Спасибо! Предложение отправлено": "Thanks! Suggestion sent",
+      "Есть идеи по разработке?": "Got an idea for the app?",
+      "Расскажите, что улучшить или добавить в приложение.": "Tell us what to improve or add.",
+      "Ваша идея или отзыв": "Your idea or feedback",
+      "Спасибо! Идея отправлена": "Thanks! Idea sent",
+      "Админ-панель": "Admin panel",
+      "Предложения вкусов и идеи": "Flavor suggestions and ideas",
+      "Отправить идею или отзыв разработчику": "Send feedback to the developer",
+      "Язык": "Language",
+      "скоро": "soon",
+      "Тема оформления": "Theme",
+      "Тёмная": "Dark",
+      "Светлая": "Light",
+      "Светлая тема скоро появится": "The light theme is coming soon",
+      "Фото": "Photo",
+      "Не удалось загрузить фото": "Couldn’t load the photo",
+      "активных: ": "active: ",
+      "Пока ничего нет.": "Nothing here yet.",
+      "Задача закрыта": "Task closed",
+      "Не удалось закрыть задачу": "Couldn’t close the task",
+      "Открыть фото": "Open photo",
+      "Приложенное фото": "Attached photo",
+      "по фото": "from photo",
+      "из поиска": "from search",
+      "Вкусов: {0}, идей: {1}": "{0} flavors, {1} ideas",
+      "Предложения вкусов": "Flavor suggestions",
+      "Идеи по разработке": "App ideas",
+      "Некорректные данные Telegram": "Invalid Telegram data",
+      "Нет подписи Telegram": "Missing Telegram signature",
+      "Неверная подпись Telegram": "Invalid Telegram signature",
+      "Сессия устарела, откройте приложение заново": "Session expired. Reopen the app",
+      "В данных Telegram нет пользователя": "No user in the Telegram data",
+      "Откройте приложение через Telegram": "Open the app from Telegram",
+      "Доступно только администраторам": "Admins only",
+      "index.html не найден": "index.html not found",
+      "Такого вкуса нет в каталоге": "That flavor isn’t in the catalog",
+      "Этого вкуса нет в вашей коллекции": "That flavor isn’t in your collection",
+      "Этот вкус уже в вашей коллекции": "That flavor is already in your collection",
+      "Этого вкуса нет в вашем вишлисте": "That flavor isn’t on your wishlist",
+      "Не удалось обработать фото. Попробуйте другое изображение": "Couldn’t process the photo. Try a different one",
+      "Сервис распознавания перегружен. Попробуйте чуть позже": "The scanner is busy. Try again in a moment",
+      "Сервис распознавания временно недоступен": "Scanning is temporarily unavailable",
+      "Распознавание по фото пока не настроено": "Photo scanning isn’t set up yet",
+      "Файл пустой": "The file is empty",
+      "Поддерживаются фото JPEG, PNG, WebP и GIF": "Supported formats: JPEG, PNG, WebP and GIF",
+      "Каталог пока пуст": "The catalog is empty",
+      "Укажите название вкуса или прикрепите фото": "Enter a flavor name or add a photo",
+      "Опишите идею или прикрепите фото": "Describe your idea or add a photo",
+      "Задача не найдена или уже закрыта": "Task not found or already closed",
+      "Слишком много фото подряд. Попробуйте через минуту": "Too many photos in a row. Try again in a minute",
+      "Слишком много предложений. Попробуйте позже": "Too many suggestions. Try again later",
+      "Слишком много сообщений. Попробуйте позже": "Too many messages. Try again later",
+      "Обнаружено несколько банок. Пожалуйста, сфотографируйте только одну банку": "Several cans in the frame. Photograph just one",
+      "Не удалось определить вкус. Сфотографируйте одну банку крупнее с передней стороны": "Couldn’t identify the flavor. Take a closer photo of one can, front side up",
+      "собрано из {0}": "of {0} collected",
+    },
+  };
+  const LANGS = ['ru', 'ua', 'en'];
+  const LOCALES = { ru: 'ru-RU', ua: 'uk-UA', en: 'en-GB' };         // для дат и чисел (Intl)
+  let LANG = 'ru';
+  function tr(key, ...args) {
+    const dict = I18N[LANG];
+    const s = dict && Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : key;
+    return args.length ? s.replace(/\{(\d+)\}/g, (m, i) => (args[i] === undefined ? m : args[i])) : s;
+  }
+  const loc = () => LOCALES[LANG];
+  function applyLang(l) {
+    LANG = LANGS.includes(l) ? l : 'ru';
+    document.documentElement.lang = LANG === 'ua' ? 'uk' : LANG;
+    document.title = tr('Коллекционер вкусов');
+  }
+  function cansWord(n) {                                               // «банка / банки / банок», can / cans
+    if (LANG === 'en') return n === 1 ? 'can' : 'cans';
+    return plural(n, ['банка', 'банки', 'банок']);                      // у ru и ua формы совпадают
+  }
+
 
   const ICONS = {
     collection: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
@@ -507,7 +941,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         const j = await resp.json();
         if (typeof j.detail === 'string') detail = j.detail;   // у 422 detail — массив, его не показываем
       } catch (e) {}
-      const err = new Error(detail || ('Ошибка ' + resp.status));
+      const err = new Error(detail ? tr(detail) : (tr(tr('Ошибка ')) + resp.status));
       err.status = resp.status;
       throw err;
     }
@@ -623,7 +1057,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   // после одного прохода GIF (или по тапу) так же плавно исчезает. Живёт отдельно от обычных окон.
   function playAchievementGif(a, { url, ms }, onDone, onFail) {
     const img = el('img', { src: url, alt: a.title, draggable: 'false' });
-    const box = el('div', { class: 'gif-pop', role: 'img', 'aria-label': 'Новое достижение: ' + a.title }, img);
+    const box = el('div', { class: 'gif-pop', role: 'img', 'aria-label': tr('Новое достижение: ') + a.title }, img);
     let closed = false, timer = null;
     const close = () => {
       if (closed) return;
@@ -656,7 +1090,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     if (!list.length) return;
     const showToast = (arr) => {
       hapticOk();
-      toast((arr.length > 1 ? 'Новые достижения: ' : 'Новое достижение: ') + arr.map((a) => a.title).join(', '));
+      toast((arr.length > 1 ? tr('Новые достижения: ') : tr('Новое достижение: ')) + arr.map((a) => a.title).join(', '));
     };
     const specials = list.filter((a) => ACHIEVEMENT_GIFS[a.id]);
     const rest = list.filter((a) => !ACHIEVEMENT_GIFS[a.id]);
@@ -680,7 +1114,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function fmtDate(s) {
     const d = parseUtc(s);
-    return d ? d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+    return d ? d.toLocaleDateString(loc(), { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
   }
 
   // «15 ноября 2026, 14:32» — точные дата и время в часовом поясе пользователя
@@ -688,7 +1122,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const d = parseUtc(s);
     if (!d) return '—';
     const parts = {};
-    new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+    new Intl.DateTimeFormat(loc(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
       .formatToParts(d).forEach((x) => { parts[x.type] = x.value; });
     return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute}`;
   }
@@ -700,7 +1134,6 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     if (k >= 2 && k <= 4) return forms[1];
     return forms[2];
   }
-  const CANS = ['банка', 'банки', 'банок'];
 
   // <img src> не может отправить свои заголовки, а ngrok (бесплатный) вместо картинки
   // отдаёт HTML-страницу с предупреждением. Поэтому качаем картинку через fetch()
@@ -835,7 +1268,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   /* ── плитка банки ── */
   function tile(item, { badge, off, wish, onclick }) {
-    return el('button', { class: 'tile' + (off ? ' off' : ''), 'aria-label': item.title + (wish ? ', в вишлисте' : ''), onclick },
+    return el('button', { class: 'tile' + (off ? ' off' : ''), 'aria-label': item.title + (wish ? tr(', в вишлисте') : ''), onclick },
       el('div', { class: 'can' },
         canImg(item.image, item.title),
         badge != null ? el('span', { class: 'badge', text: String(badge) }) : null),
@@ -877,7 +1310,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const rateBtns = Array.from({ length: 10 }, (_, i) => {
       const n = i + 1;
       const b = el('button', {
-        type: 'button', 'aria-label': 'Оценка ' + n + ' из 10',
+        type: 'button', 'aria-label': tr('Оценка ') + n + tr(' из 10'),
         onclick: () => { if (busy) return; selected = n; errEl.textContent = ''; haptic(); sync(); },
       });
       b.innerHTML = CAN_SVG;
@@ -897,8 +1330,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       });
     }
     const rateBox = el('div', { class: 'rate-box' },
-      el('div', { class: 'rate-head' }, el('span', { text: 'Ваша оценка' }), valueEl),
-      el('div', { class: 'rate', role: 'group', 'aria-label': 'Оценка от 1 до 10' }, rateBtns));
+      el('div', { class: 'rate-head' }, el('span', { text: tr('Ваша оценка') }), valueEl),
+      el('div', { class: 'rate', role: 'group', 'aria-label': tr('Оценка от 1 до 10') }, rateBtns));
 
     // Пошаговая схема. Шаг 1 «choose»: только выбор действия. Шаг 2 «rate»: шкала банок + подтверждение.
     //   add    — «Добавить в коллекцию» → шкала → «Подтвердить добавление»; «В вишлист» — сразу в вишлист
@@ -907,17 +1340,17 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const editable = mode !== 'view';
     const collectBtn = editable ? el('button', {
       class: 'btn', type: 'button',
-      text: mode === 'add' ? 'Добавить в коллекцию' : mode === 'wish' ? 'Перенести в коллекцию' : 'Изменить оценку',
+      text: mode === 'add' ? tr('Добавить в коллекцию') : mode === 'wish' ? tr('Перенести в коллекцию') : tr('Изменить оценку'),
       onclick: () => { if (busy) return; step = 'rate'; errEl.textContent = ''; haptic(); sync(); },
     }) : null;
     const wishBtn = mode === 'add'
-      ? el('button', { class: 'btn ghost', type: 'button', text: 'В вишлист', onclick: addToWishlist }) : null;
+      ? el('button', { class: 'btn ghost', type: 'button', text: tr('В вишлист'), onclick: addToWishlist }) : null;
     const primary = editable ? el('button', { class: 'btn', type: 'button', onclick: submit }) : null;
     const backBtn = editable ? el('button', {
-      class: 'btn ghost', type: 'button', text: 'Назад',
+      class: 'btn ghost', type: 'button', text: tr('Назад'),
       onclick: () => { if (busy) return; step = 'choose'; selected = initial; errEl.textContent = ''; sync(); },
     }) : null;
-    const delLabel = mode === 'manage' ? 'Удалить из коллекции' : 'Удалить из вишлиста';
+    const delLabel = mode === 'manage' ? tr('Удалить из коллекции') : tr('Удалить из вишлиста');
     const delBtn = (mode === 'manage' || mode === 'wish')
       ? el('button', { class: 'btn ghost', type: 'button', text: delLabel, onclick: remove })
       : null;
@@ -925,7 +1358,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     // Только для вкуса, найденного по фото: распознали неверно → считаем попытку неудачной
     // и сразу предлагаем отправить вкус на добавление в каталог.
     const wrongBtn = fromPhoto && editable
-      ? el('button', { class: 'btn ghost', type: 'button', text: 'Это не тот вкус', onclick: wrongFlavor })
+      ? el('button', { class: 'btn ghost', type: 'button', text: tr('Это не тот вкус'), onclick: wrongFlavor })
       : null;
     function wrongFlavor() {
       if (busy) return;
@@ -953,10 +1386,10 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       if (mode === 'manage') {
         const changed = selected !== initial;
         ok = !!selected && changed;
-        label = changed ? 'Сохранить новую оценку' : 'Оценка не изменена';
+        label = changed ? tr('Сохранить новую оценку') : tr('Оценка не изменена');
       } else {
         ok = !!selected;
-        label = !selected ? 'Выберите оценку' : mode === 'wish' ? 'Подтвердить перенос' : 'Подтвердить добавление';
+        label = !selected ? tr('Выберите оценку') : mode === 'wish' ? tr('Подтвердить перенос') : tr('Подтвердить добавление');
       }
       primary.disabled = busy || !ok;
       primary.textContent = label;
@@ -991,18 +1424,18 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       const id = item.id;
       if (mode === 'manage')
         return act(() => api('/api/collection/' + id, { method: 'PUT', body: { rating: selected } }),
-          'Оценка сохранена', 'Не удалось сохранить');
+          tr('Оценка сохранена'), tr('Не удалось сохранить'));
       if (mode === 'wish')
         return act(() => api(`/api/wishlist/${id}/collect`, { method: 'POST', body: { rating: selected } }),
-          'Перенесено в коллекцию', 'Не удалось перенести');
+          tr('Перенесено в коллекцию'), tr('Не удалось перенести'));
       return act(() => api('/api/collection/' + id, { method: 'PUT', body: { rating: selected } }),
-        'Добавлено в коллекцию', 'Не удалось добавить');
+        tr('Добавлено в коллекцию'), tr('Не удалось добавить'));
     }
 
     function addToWishlist() {
       if (busy) return;
       return act(() => api('/api/wishlist/' + item.id, { method: 'PUT' }),
-        'Добавлено в вишлист', 'Не удалось добавить');
+        tr('Добавлено в вишлист'), tr('Не удалось добавить'));
     }
 
     let armed = false, armTimer = null;
@@ -1010,7 +1443,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       if (busy) return;
       if (!armed) {                                      // двухшаговое подтверждение
         armed = true;
-        delBtn.textContent = 'Нажмите ещё раз, чтобы удалить';
+        delBtn.textContent = tr('Нажмите ещё раз, чтобы удалить');
         delBtn.classList.add('armed');
         armTimer = setTimeout(() => {
           armed = false;
@@ -1025,25 +1458,25 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       delBtn.classList.remove('armed');
       const url = (mode === 'manage' ? '/api/collection/' : '/api/wishlist/') + item.id;
       await act(() => api(url, { method: 'DELETE' }),
-        mode === 'manage' ? 'Удалено из коллекции' : 'Удалено из вишлиста', 'Не удалось удалить');
+        mode === 'manage' ? tr('Удалено из коллекции') : tr('Удалено из вишлиста'), tr('Не удалось удалить'));
     }
 
-    const dateLine = collected && item.added_at ? 'Добавлено: ' + fmtDate(item.added_at)
-      : mode === 'wish' && item.added_at ? 'В вишлисте с ' + fmtDate(item.added_at) : null;
+    const dateLine = collected && item.added_at ? tr('Добавлено: ') + fmtDate(item.added_at)
+      : mode === 'wish' && item.added_at ? tr('В вишлисте с ') + fmtDate(item.added_at) : null;
 
     const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
       el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' },
-        el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('button', { class: 'close', 'aria-label': tr('Закрыть'), text: '✕', onclick: closeModal }),
         el('div', { class: 'm-top' },
           el('div', { class: 'pic' }, canImg(item.image, item.title)),
           el('div', { class: 'info' },
             el('h3', { text: item.title }),
             el('div', { class: 'tags' },
               category ? el('span', { class: 'tag', text: category }) : null,
-              collected ? el('span', { class: 'tag lime', text: 'В коллекции' }) : null,
-              wished ? el('span', { class: 'tag lime', text: 'В вишлисте' }) : null,
+              collected ? el('span', { class: 'tag lime', text: tr('В коллекции') }) : null,
+              wished ? el('span', { class: 'tag lime', text: tr('В вишлисте') }) : null,
               mode === 'view' && collected && item.rating != null
-                ? el('span', { class: 'tag', text: 'Оценка ' + item.rating + '/10' }) : null),
+                ? el('span', { class: 'tag', text: tr('Оценка ') + item.rating + '/10' }) : null),
             dateLine ? el('div', { class: 'added', text: dateLine }) : null)),
         editable ? rateBox : null,
         editable ? el('div', { class: 'actions' }, errEl, collectBtn, wishBtn, primary, backBtn, delBtn, wrongBtn) : null));
@@ -1067,9 +1500,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   function goSub(sub) { state.sub = sub; render(); }
 
   function wishFab(count) {
-    return el('button', { class: 'fab', type: 'button', 'aria-label': 'Вишлист', onclick: () => { haptic(); goSub('wishlist'); } },
+    return el('button', { class: 'fab', type: 'button', 'aria-label': tr('Вишлист'), onclick: () => { haptic(); goSub('wishlist'); } },
       el('span', { class: 'ico', html: ICONS.bookmark }),
-      el('span', { text: 'Вишлист' }),
+      el('span', { text: tr('Вишлист') }),
       count > 0 ? el('span', { class: 'cnt', text: String(count) }) : null);
   }
 
@@ -1078,17 +1511,17 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const head = el('div', { class: 'top' },
       el('div', { class: 'left' },
         el('div', {},
-          el('h1', { text: 'Моя коллекция' }),
-          el('div', { class: 'sub', text: `Собрано ${stats.tried} из ${stats.total}` }))),
-      el('button', { class: 'pill', text: 'Все вкусы', onclick: () => goSub('catalog') }));
+          el('h1', { text: tr('Моя коллекция') }),
+          el('div', { class: 'sub', text: tr(tr('Собрано {0} из {1}'), stats.tried, stats.total) }))),
+      el('button', { class: 'pill', text: tr('Все вкусы'), onclick: () => goSub('catalog') }));
 
     const fab = wishFab(stats.wishlist || 0);
 
     if (!items.length) {
       return el('div', {}, head,
         el('div', { class: 'empty' },
-          el('b', { text: 'Пока пусто' }),
-          el('div', {}, el('button', { class: 'pill', text: 'Добавить первую банку', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
+          el('b', { text: tr('Пока пусто') }),
+          el('div', {}, el('button', { class: 'pill', text: tr('Добавить первую банку'), onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))),
         fab);
     }
     return el('div', { class: 'fab-space' }, head,
@@ -1103,20 +1536,20 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   function wishlistView(d) {
     const head = el('div', { class: 'top' },
       el('div', { class: 'left' },
-        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: () => goSub('main') }),
+        el('button', { class: 'back', 'aria-label': tr('Назад'), text: '‹', onclick: () => goSub('main') }),
         el('div', {},
-          el('h1', { text: 'Вишлист' }),
-          el('div', { class: 'sub', text: `Хочу попробовать: ${d.count}` }))));
+          el('h1', { text: tr('Вишлист') }),
+          el('div', { class: 'sub', text: tr(tr('Хочу попробовать: {0}'), d.count) }))));
 
     if (!d.items.length) {
       return el('div', {}, head,
         el('div', { class: 'empty' },
-          el('b', { text: 'Вишлист пуст' }),
-          'Найди вкус через поиск и добавь его сюда, чтобы не забыть попробовать.',
-          el('div', {}, el('button', { class: 'pill', text: 'Добавить первую банку', onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))));
+          el('b', { text: tr('Вишлист пуст') }),
+          tr('Найди вкус через поиск и добавь его сюда, чтобы не забыть попробовать.'),
+          el('div', {}, el('button', { class: 'pill', text: tr('Добавить первую банку'), onclick: () => { state.tab = 'search'; state.sub = 'main'; render(); } }))));
     }
     return el('div', {}, head,
-      el('div', { class: 'note', style: 'margin:-6px 2px 14px', text: 'Нажмите на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.' }),
+      el('div', { class: 'note', style: 'margin:-6px 2px 14px', text: tr('Нажмите на банку, чтобы перенести её в коллекцию с оценкой или убрать из вишлиста.') }),
       el('div', { class: 'grid' },
         d.items.map((it) => tile(it, {
           onclick: () => openModal(it, { mode: 'wish', category: it.category }),
@@ -1130,13 +1563,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const wish = d.categories.reduce((s, c) => s + (c.wishlisted || 0), 0);
     const head = el('div', { class: 'top' },
       el('div', { class: 'left' },
-        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: () => goSub('main') }),
+        el('button', { class: 'back', 'aria-label': tr('Назад'), text: '‹', onclick: () => goSub('main') }),
         el('div', {},
-          el('h1', { text: 'Все вкусы' }),
-          el('div', { class: 'sub', text: `В коллекции ${got} из ${total}` + (wish ? `, в вишлисте ${wish}` : '') }))));
+          el('h1', { text: tr('Все вкусы') }),
+          el('div', { class: 'sub', text: tr(tr('В коллекции {0} из {1}'), got, total) + (wish ? tr(tr(', в вишлисте {0}'), wish) : '') }))));
 
     if (!d.categories.length) {
-      return el('div', {}, head, el('div', { class: 'empty' }, 'Каталог пока пуст.'));
+      return el('div', {}, head, el('div', { class: 'empty' }, tr('Каталог пока пуст.')));
     }
     return el('div', {}, head,
       d.categories.map((cat) =>
@@ -1191,16 +1624,16 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       });
     } catch (e) {
       toast(e && e.name === 'NotAllowedError'
-        ? 'Нет доступа к камере. Разрешите её в настройках Telegram'
-        : 'Камера недоступна на этом устройстве');
+        ? tr('Нет доступа к камере. Разрешите её в настройках Telegram')
+        : tr('Камера недоступна на этом устройстве'));
       return;
     }
-    const video = el('video', { autoplay: '', muted: '', playsinline: '', 'aria-label': 'Камера' });
+    const video = el('video', { autoplay: '', muted: '', playsinline: '', 'aria-label': tr('Камера') });
     video.muted = true;                                  // нужно для автозапуска на iOS
     video.srcObject = stream;
     const frame = el('div', { class: 'cam-frame' });
     const view = el('div', { class: 'cam-view' }, video, frame,
-      el('div', { class: 'cam-hint', text: 'Поместите банку в рамку' }));
+      el('div', { class: 'cam-hint', text: tr('Поместите банку в рамку') }));
     const layoutFrame = () => {
       const r = camFrameRect(view.clientWidth, view.clientHeight);
       frame.style.left = r.x + 'px'; frame.style.top = r.y + 'px';
@@ -1215,7 +1648,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const flash = el('div', { class: 'cam-flash', 'aria-hidden': 'true' });
     view.append(flash);
     let shooting = false;
-    const shutterBtn = el('button', { class: 'shutter', type: 'button', 'aria-label': 'Сделать снимок', onclick: () => shoot() });
+    const shutterBtn = el('button', { class: 'shutter', type: 'button', 'aria-label': tr('Сделать снимок'), onclick: () => shoot() });
     const resetShot = () => {
       shooting = false;
       shutterBtn.disabled = false;
@@ -1238,17 +1671,17 @@ textarea.field { min-height: 104px; line-height: 1.4; }
           cv.width = c.sw; cv.height = c.sh;
           cv.getContext('2d').drawImage(video, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
           cv.toBlob((blob) => {
-            if (!blob) { toast('Не удалось сделать снимок'); resetShot(); return; }
+            if (!blob) { toast(tr('Не удалось сделать снимок')); resetShot(); return; }
             handlePhoto(new File([blob], 'camera.jpg', { type: 'image/jpeg' }));   // handlePhoto закроет камеру
           }, 'image/jpeg', 0.9);
         } catch (e) {
-          toast('Не удалось сделать снимок');
+          toast(tr('Не удалось сделать снимок'));
           resetShot();
         }
       }));
     };
     const overlay = el('div', { class: 'cam', role: 'dialog', 'aria-modal': 'true' },
-      el('button', { class: 'cam-x', type: 'button', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+      el('button', { class: 'cam-x', type: 'button', 'aria-label': tr('Закрыть'), text: '✕', onclick: closeModal }),
       view,
       el('div', { class: 'cam-bar' }, shutterBtn));
     overlay._cleanup = stop;                             // closeModal остановит камеру
@@ -1265,16 +1698,16 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   function openPhotoSheet() {
     closeModal();
     haptic();
-    const go = el('button', { class: 'btn', type: 'button', text: 'Сделать фото',
+    const go = el('button', { class: 'btn', type: 'button', text: tr('Сделать фото'),
       onclick: () => {
-        if (!canLiveCamera) { toast('Камера недоступна на этом устройстве'); return; }
+        if (!canLiveCamera) { toast(tr('Камера недоступна на этом устройстве')); return; }
         openLiveCamera();
       } });
     const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
       el('div', { class: 'modal sheet instr', role: 'dialog', 'aria-modal': 'true' },
-        el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
-        el('h3', { class: 'sheet-t', text: 'Сфотографируйте переднюю часть банки' }),
-        el('div', { class: 'instr-pic' }, canImg('/static/images/instruction.png', 'Как сфотографировать банку')),
+        el('button', { class: 'close', 'aria-label': tr('Закрыть'), text: '✕', onclick: closeModal }),
+        el('h3', { class: 'sheet-t', text: tr('Сфотографируйте переднюю часть банки') }),
+        el('div', { class: 'instr-pic' }, canImg('/static/images/instruction.png', tr('Как сфотографировать банку'))),
         el('div', { class: 'actions' }, go)));
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';
@@ -1312,9 +1745,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const shot = el('div', { class: 'shot' });
     scanEl = el('div', { class: 'scan', role: 'status', 'aria-live': 'polite' },
       shot,
-      el('b', { text: 'Распознаю банку' }),
-      el('div', { class: 'note', text: 'Обычно это занимает несколько секунд' }),
-      el('button', { class: 'pill', type: 'button', text: 'Отмена', onclick: () => ac.abort() }));
+      el('b', { text: tr('Распознаю банку') }),
+      el('div', { class: 'note', text: tr('Обычно это занимает несколько секунд') }),
+      el('button', { class: 'pill', type: 'button', text: tr('Отмена'), onclick: () => ac.abort() }));
     document.body.append(scanEl);
     document.body.style.overflow = 'hidden';
     const finish = () => {
@@ -1340,14 +1773,14 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         clearTimeout(timer);
         finish();
         invalidateApiCache();                                  // скрытое достижение теперь должно появиться в списке
-        if (!(res.new_achievements || []).length) toast(res.message || 'Эта банка не добавляется в коллекцию');
+        if (!(res.new_achievements || []).length) toast((res.message && tr(res.message)) || tr('Эта банка не добавляется в коллекцию'));
         return;
       }
       if (res.status !== 'success' || !res.item) {
         // несколько банок или банка не найдена: показываем подсказку сервера
         clearTimeout(timer);
         finish();
-        toast(res.message || 'Не удалось распознать банку');
+        toast((res.message && tr(res.message)) || tr('Не удалось распознать банку'));
         if (res.status === 'not_found') {
           state.photoFails += 1;
           if (state.tab === 'search') render({ keepScroll: true });   // показать карточку «Предложить вкус»
@@ -1358,9 +1791,9 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     } catch (e) {
       clearTimeout(timer);
       finish();
-      if (ac.signal.aborted) toast(timedOut ? 'Сервер долго отвечает. Попробуйте ещё раз' : 'Распознавание отменено');
+      if (ac.signal.aborted) toast(timedOut ? tr('Сервер долго отвечает. Попробуйте ещё раз') : tr('Распознавание отменено'));
       else {
-        toast(e.message || 'Не удалось распознать банку');
+        toast(e.message || tr('Не удалось распознать банку'));
         // «неудача» — только когда сервер ответил, что вкус не определён (404); сбои сети/ключа не считаем
         if (e.status === 404) {
           state.photoFails += 1;
@@ -1377,7 +1810,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     state.photoFails = 0;
     state.tab = 'collection'; state.sub = 'main';
     await render();
-    toast('Нашли: ' + item.title);
+    toast(tr('Нашли: ') + item.title);
     openModal(item, {
       category: item.category,
       mode: item.is_collected ? 'manage' : item.in_wishlist ? 'wish' : 'add',
@@ -1409,8 +1842,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function searchRow(it, onpick) {
     const tags = [];
-    if (it.is_collected) tags.push(el('span', { class: 'tag lime', text: 'В коллекции ' + it.rating + '/10' }));
-    else if (it.in_wishlist) tags.push(el('span', { class: 'tag lime', text: 'В вишлисте' }));
+    if (it.is_collected) tags.push(el('span', { class: 'tag lime', text: tr('В коллекции ') + it.rating + '/10' }));
+    else if (it.in_wishlist) tags.push(el('span', { class: 'tag lime', text: tr('В вишлисте') }));
     return el('button', { class: 'row', type: 'button', 'aria-label': it.title, onclick: onpick },
       el('div', { class: 'th' }, canImg(it.image, it.title)),
       el('div', { class: 'tx' },
@@ -1429,11 +1862,11 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     }
 
     const input = el('input', {
-      type: 'search', placeholder: 'Название или ключевое слово', autocomplete: 'off',
-      autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', 'aria-label': 'Поиск вкуса',
+      type: 'search', placeholder: tr('Название или ключевое слово'), autocomplete: 'off',
+      autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'search', 'aria-label': tr('Поиск вкуса'),
     });
     input.value = state.q;
-    const clr = el('button', { class: 'clr', type: 'button', 'aria-label': 'Очистить', text: '✕',
+    const clr = el('button', { class: 'clr', type: 'button', 'aria-label': tr('Очистить'), text: '✕',
       onclick: () => { input.value = ''; update(); input.focus(); } });
     const meta = el('div', { class: 'res-meta' });
     const list = el('div', { class: 'rows' });
@@ -1449,19 +1882,19 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         found = all.filter((it) => tokens.every((t) => it._h.includes(t))).sort((a, b) => rank(a) - rank(b));
       }
       meta.textContent = !all.length ? ''
-        : tokens.length ? `Найдено: ${found.length}`
-        : 'Популярные вкусы';
+        : tokens.length ? tr(tr('Найдено: {0}'), found.length)
+        : tr('Популярные вкусы');
 
       if (!all.length) {
-        list.replaceChildren(el('div', { class: 'empty' }, 'Каталог пока пуст.'));
+        list.replaceChildren(el('div', { class: 'empty' }, tr('Каталог пока пуст.')));
         return;
       }
       if (!found.length) {
         // первый же ненаход → предлагаем добавить этот вкус в каталог
         list.replaceChildren(el('div', { class: 'empty' },
-          el('b', { text: 'Ничего не нашлось' }),
-          'Попробуйте ещё раз. Если такого вкуса нет в каталоге, предложите и мы его добавим',
-          el('div', {}, el('button', { class: 'pill', type: 'button', text: 'Предложить вкус',
+          el('b', { text: tr('Ничего не нашлось') }),
+          tr('Попробуйте ещё раз. Если такого вкуса нет в каталоге, предложите и мы его добавим'),
+          el('div', {}, el('button', { class: 'pill', type: 'button', text: tr('Предложить вкус'),
             onclick: () => { input.blur(); openSuggestFlavor({ source: 'text', title: input.value.trim() }); } }))));
         return;
       }
@@ -1476,16 +1909,16 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
     return el('div', {},
       el('div', { class: 'top' }, el('div', { class: 'left' }, el('div', {},
-        el('h1', { text: 'Поиск' })))),
+        el('h1', { text: tr('Поиск') })))),
       el('div', { class: 'search' },
         el('span', { class: 'ico si', html: ICONS.search }), input, clr),
       el('button', { class: 'photo', type: 'button', onclick: openPhotoSheet },
         el('span', { class: 'ico', html: ICONS.camera }),
-        el('b', { text: 'Добавить по фото' })),
+        el('b', { text: tr('Добавить по фото') })),
       state.photoFails >= 1
         ? el('div', { class: 'sugg' },
-            el('div', { class: 'note', text: 'Не получается распознать банку? Возможно, этого вкуса ещё нет в каталоге.' }),
-            el('button', { class: 'pill', type: 'button', text: 'Предложить вкус', onclick: () => openSuggestFlavor({ source: 'photo' }) }))
+            el('div', { class: 'note', text: tr('Не получается распознать банку? Возможно, этого вкуса ещё нет в каталоге.') }),
+            el('button', { class: 'pill', type: 'button', text: tr('Предложить вкус'), onclick: () => openSuggestFlavor({ source: 'photo' }) }))
         : null,
       meta, list);
   }
@@ -1502,16 +1935,16 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   function openDayModal(date, list) {
     closeModal();
     const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
-    const title = cap(date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-      .replace(/\s*г\.$/, ''));
+    const title = cap(date.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      .replace(/\s*[гр]\.$/, ''));
     const rows = list.slice().sort((a, b) => a.d - b.d).map((x) =>
       el('li', {}, el('span', { text: x.title }),
-        el('time', { text: x.d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) })));
+        el('time', { text: x.d.toLocaleTimeString(loc(), { hour: '2-digit', minute: '2-digit' }) })));
     const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
       el('div', { class: 'modal sheet', role: 'dialog', 'aria-modal': 'true' },
-        el('button', { class: 'close', type: 'button', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('button', { class: 'close', type: 'button', 'aria-label': tr('Закрыть'), text: '✕', onclick: closeModal }),
         el('h3', { class: 'sheet-t', text: title }),
-        el('p', { class: 'day-sum', text: `Добавлено: ${list.length} ${plural(list.length, CANS)}` }),
+        el('p', { class: 'day-sum', text: tr(tr('Добавлено: {0} {1}'), list.length, cansWord(list.length)) }),
         el('ul', { class: 'day-list' }, rows)));
     document.body.append(overlay);
     document.body.style.overflow = 'hidden';
@@ -1537,7 +1970,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const WD = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
     const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
     const mondayIndex = (d) => (d.getDay() + 6) % 7;                  // Пн = 0 … Вс = 6
-    const monthTitle = (y, m) => cap(new Date(y, m, 1).toLocaleDateString('ru-RU', { month: 'long' })) + ' ' + y;
+    const monthTitle = (y, m) => cap(new Date(y, m, 1).toLocaleDateString(loc(), { month: 'long' })) + ' ' + y;
     const MON3 = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
     const dates = new Map();                                          // dayKey -> Date плиток на экране
     const body = el('div');
@@ -1546,15 +1979,15 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       const key = dayKey(date);
       dates.set(key, date);
       const n = (perDay.get(key) || []).length;
-      const label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const label = date.toLocaleDateString(loc(), { day: 'numeric', month: 'long' });
       return el('div', {
         class: 'cell l' + level(n) + (date > today ? ' future' : '') + (key === todayKey ? ' today' : ''),
         'data-k': key,
-        title: n ? `${label}: ${n} ${plural(n, CANS)}` : `${label}: ничего`,
+        title: n ? `${label}: ${n} ${cansWord(n)}` : `${label}: ${tr('ничего')}`,
         text: showNum ? String(date.getDate()) : null,
       });
     }
-    const weekdays = () => el('div', { class: 'heat-wd' }, WD.map((x) => el('span', { text: x })));
+    const weekdays = () => el('div', { class: 'heat-wd' }, WD.map((x) => el('span', { text: tr(x) })));
 
     // календарь одного месяца: 7 колонок Пн–Вс, 1-е число стоит под своим днём недели
     function monthBlock(y, m, compact) {
@@ -1572,13 +2005,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     function drawWeek() {                                             // текущая неделя целиком: Пн–Вс
       const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - mondayIndex(today));
       const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-      const fmt = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      const fmt = (d) => d.toLocaleDateString(loc(), { day: 'numeric', month: 'long' });
       const range = start.getMonth() === end.getMonth()
         ? `${start.getDate()}–${fmt(end)}` : `${fmt(start)} – ${fmt(end)}`;
       const cells = Array.from({ length: 7 }, (_, i) =>
         makeCell(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), true));
       return [el('div', { class: 'cal-block' },
-        el('div', { class: 'cal-title', text: 'Текущая неделя: ' + range }),
+        el('div', { class: 'cal-title', text: tr('Текущая неделя: ') + range }),
         weekdays(),
         el('div', { class: 'heat cal' }, cells))];
     }
@@ -1599,10 +2032,10 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       }
       if (!marks.length || marks[0].w >= 3) marks.unshift({ w: 0, m: dayAt(0).getMonth() });
       const labels = marks.map(({ w, m }) =>
-        el('span', { style: `grid-column:${w + 1} / span ${Math.min(3, weeks - w)}`, text: MON3[m] }));
-      const fmt = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        el('span', { style: `grid-column:${w + 1} / span ${Math.min(3, weeks - w)}`, text: tr(MON3[m]) }));
+      const fmt = (d) => d.toLocaleDateString(loc(), { day: 'numeric', month: 'long' });
       return [
-        el('div', { class: 'cal-title', text: `Последние 13 недель: ${fmt(start)} – ${fmt(today)}` }),
+        el('div', { class: 'cal-title', text: tr(tr('Последние 13 недель: {0} – {1}'), fmt(start), fmt(today)) }),
         el('div', { class: 'heat-months', style: `--cols:${weeks}` }, labels),
         el('div', { class: 'heat', style: `--cols:${weeks}` }, cells),
       ];
@@ -1625,7 +2058,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       for (let m = 0; m < 12; m++) {
         const di = Math.round((new Date(y, m, 1) - jan1) / 864e5);
         const col = Math.floor((lead + di) / 7);
-        labels.push(el('span', { style: `grid-column:${col + 1} / span ${Math.min(3, cols - col)}`, text: MON3[m] }));
+        labels.push(el('span', { style: `grid-column:${col + 1} / span ${Math.min(3, cols - col)}`, text: tr(MON3[m]) }));
       }
       return [
         el('div', { class: 'cal-title', text: String(y) }),
@@ -1648,7 +2081,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       if (!date || date > today) return;                              // будущие дни: ничего не происходит
       const list = perDay.get(c.dataset.k) || [];
       if (!list.length) {
-        toast(date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) + ': ничего не добавлено');
+        toast(date.toLocaleDateString(loc(), { day: 'numeric', month: 'long' }) + tr(': ничего не добавлено'));
         return;
       }
       haptic();
@@ -1656,7 +2089,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     });
 
     const segBtns = PERIODS.map((p, i) => el('button', {
-      type: 'button', role: 'tab', text: p.label, 'aria-label': p.full,
+      type: 'button', role: 'tab', text: tr(p.label), 'aria-label': tr(p.full),
       onclick: () => {
         if (i === periodIdx) return;
         haptic();
@@ -1675,13 +2108,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     draw();
 
     return el('section', { class: 'card' },
-      el('div', { class: 'card-title has-seg' }, el('h2', { text: 'Активность' })),
-      el('div', { class: 'act-seg', role: 'tablist', 'aria-label': 'Период активности' }, segBtns),
+      el('div', { class: 'card-title has-seg' }, el('h2', { text: tr('Активность') })),
+      el('div', { class: 'act-seg', role: 'tablist', 'aria-label': tr('Период активности') }, segBtns),
       body,
       el('div', { class: 'legend' },
-        el('em', { text: 'Меньше' }),
+        el('em', { text: tr('Меньше') }),
         [0, 1, 2, 3, 4].map((l) => el('div', { class: 'cell l' + l })),
-        el('em', { text: 'Больше' })));
+        el('em', { text: tr('Больше') })));
   }
 
   // Аватарка из Telegram: буква-заглушка лежит под картинкой; фото плавно появляется после загрузки,
@@ -1702,8 +2135,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const head = el('div', { class: 'top' },
       el('div', { class: 'left' },
         el('div', {},
-          el('h1', { text: 'Достижения' }),
-          el('div', { class: 'sub', text: `Получено ${d.unlocked} из ${d.total}` }))));
+          el('h1', { text: tr('Достижения') }),
+          el('div', { class: 'sub', text: tr(tr('Получено {0} из {1}'), d.unlocked, d.total) }))));
 
     const card = (a) => {
       const done = a.is_unlocked;
@@ -1720,12 +2153,12 @@ textarea.field { min-height: 104px; line-height: 1.4; }
           !done && !part && a.target > 1
             ? el('div', { class: 'prog' }, el('div', { class: 'line' }, el('span', { text: `${val(0)} / ${val(a.target)}` })))
             : null,
-          done && a.unlocked_at ? el('div', { class: 'date', text: 'Получено ' + fmtDate(a.unlocked_at) }) : null),
-        done ? el('div', { class: 'badge', 'aria-label': 'Выполнено', html: ACH_ICONS.check }) : null);
+          done && a.unlocked_at ? el('div', { class: 'date', text: tr('Получено ') + fmtDate(a.unlocked_at) }) : null),
+        done ? el('div', { class: 'badge', 'aria-label': tr('Выполнено'), html: ACH_ICONS.check }) : null);
     };
 
     if (!d.items.length) {
-      return el('div', {}, head, el('div', { class: 'empty' }, el('b', { text: 'Пока нет достижений' })));
+      return el('div', {}, head, el('div', { class: 'empty' }, el('b', { text: tr('Пока нет достижений') })));
     }
     return el('div', {}, head, el('div', { class: 'ach-list' }, d.items.map(card)));
   }
@@ -1734,7 +2167,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     const items = col.items;
     const stats = col.stats;
     const u = tgUser();
-    const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'Коллекционер';
+    const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || tr('Коллекционер');
     const handle = u.username ? '@' + u.username : '';
 
     const favs = items.slice()
@@ -1751,32 +2184,32 @@ textarea.field { min-height: 104px; line-height: 1.4; }
           handle ? el('div', { class: 'hd', text: handle }) : null)));
 
     const favCard = el('section', { class: 'card' },
-      el('div', { class: 'card-title' }, el('h2', { text: 'Избранное' })),
+      el('div', { class: 'card-title' }, el('h2', { text: tr('Избранное') })),
       favs.length
         ? el('div', { class: 'grid four' },
             favs.map((it) => tile(it, {
               badge: it.rating,
               onclick: () => openModal(it, { mode: 'manage', category: it.category }),
             })))
-        : el('div', { class: 'note', text: 'Оцени первые банки — здесь появится твой топ-4.' }));
+        : el('div', { class: 'note', text: tr('Оцени первые банки — здесь появится твой топ-4.') }));
 
     const statCard = el('section', { class: 'card' },
-      el('div', { class: 'card-title' }, el('h2', { text: 'Статистика' })),
+      el('div', { class: 'card-title' }, el('h2', { text: tr('Статистика') })),
       el('div', { class: 'stats' },
-        el('div', { class: 'stat' }, el('b', { class: 'accent', text: String(stats.tried) }), el('small', { text: 'собрано из ' + stats.total })),
-        el('div', { class: 'stat' }, el('b', { text: avg ? avg.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) : '—' }), el('small', { text: 'средняя оценка' })),
-        el('div', { class: 'stat' }, el('b', { text: pct + '%' }), el('small', { text: 'каталога' }))),
+        el('div', { class: 'stat' }, el('b', { class: 'accent', text: String(stats.tried) }), el('small', { text: tr('собрано из {0}', stats.total) })),
+        el('div', { class: 'stat' }, el('b', { text: avg ? avg.toLocaleString(loc(), { maximumFractionDigits: 1 }) : '—' }), el('small', { text: tr('средняя оценка') })),
+        el('div', { class: 'stat' }, el('b', { text: pct + '%' }), el('small', { text: tr('каталога') }))),
       cat.categories.length
         ? el('div', {}, cat.categories.map((c) =>
             el('div', { class: 'crow' },
               el('div', { class: 'line' }, el('div', { text: c.name }), el('span', { text: `${c.collected} / ${c.total}` })),
               el('div', { class: 'bar' }, el('i', { style: `width:${c.total ? Math.round((c.collected / c.total) * 100) : 0}%` })))))
-        : el('div', { class: 'note', text: 'Каталог пока пуст.' }));
+        : el('div', { class: 'note', text: tr('Каталог пока пуст.') }));
 
     return el('div', {},
       el('div', { class: 'top' },
-        el('div', { class: 'left' }, el('h1', { text: 'Профиль' })),
-        el('button', { class: 'gear', type: 'button', 'aria-label': 'Настройки', onclick: () => { haptic(); goSub('settings'); } },
+        el('div', { class: 'left' }, el('h1', { text: tr('Профиль') })),
+        el('button', { class: 'gear', type: 'button', 'aria-label': tr('Настройки'), onclick: () => { haptic(); goSub('settings'); } },
           el('span', { class: 'ico', html: ICONS.gear }))),
       meCard, favCard, statCard, activityCard(items));
   }
@@ -1811,7 +2244,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         file = null;
         if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
         prev.hidden = true; prev.replaceChildren();
-        pick.textContent = 'Прикрепить фото (необязательно)';
+        pick.textContent = tr('Прикрепить фото (необязательно)');
         errEl.textContent = '';
       };
       clearFile();
@@ -1819,15 +2252,15 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         const f = fileInput.files && fileInput.files[0];
         fileInput.value = '';                            // чтобы то же фото можно было выбрать снова
         if (!f || busy) return;
-        if (f.type && !f.type.startsWith('image/')) { toast('Выберите изображение'); return; }
+        if (f.type && !f.type.startsWith('image/')) { toast(tr('Выберите изображение')); return; }
         clearFile();
         file = f;
         previewUrl = URL.createObjectURL(f);
         prev.replaceChildren(
-          el('img', { src: previewUrl, alt: 'Выбранное фото' }),
-          el('button', { type: 'button', 'aria-label': 'Убрать фото', text: '✕', onclick: () => { if (!busy) { clearFile(); sync(); } } }));
+          el('img', { src: previewUrl, alt: tr('Выбранное фото') }),
+          el('button', { type: 'button', 'aria-label': tr('Убрать фото'), text: '✕', onclick: () => { if (!busy) { clearFile(); sync(); } } }));
         prev.hidden = false;
-        pick.textContent = 'Заменить фото';
+        pick.textContent = tr('Заменить фото');
         sync();                                          // фото прикреплено — кнопка «Отправить» включается сразу
       });
       attachBox = el('div', { class: 'attach' }, fileInput, pick, prev);
@@ -1846,7 +2279,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         let photo = null;
         if (file) {
           photo = await prepareImage(file);              // уменьшаем до 1280 px, HEIC → JPEG
-          if (photo.size > 8 * 1024 * 1024) throw new Error('Фото слишком большое (максимум 8 МБ)');
+          if (photo.size > 8 * 1024 * 1024) throw new Error(tr('Фото слишком большое (максимум 8 МБ)'));
         }
         await onSubmit(nodes.map((n) => n.value.trim()), photo);
         hapticOk();
@@ -1855,13 +2288,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         if (onDone) onDone();
       } catch (e) {
         busy = false;
-        errEl.textContent = e.message || 'Не удалось отправить';
+        errEl.textContent = e.message || tr('Не удалось отправить');
         sync();
       }
     }
     const overlay = el('div', { class: 'overlay', onclick: (e) => { if (e.target === overlay) closeModal(); } },
       el('div', { class: 'modal sheet', role: 'dialog', 'aria-modal': 'true' },
-        el('button', { class: 'close', 'aria-label': 'Закрыть', text: '✕', onclick: closeModal }),
+        el('button', { class: 'close', 'aria-label': tr('Закрыть'), text: '✕', onclick: closeModal }),
         el('h3', { class: 'sheet-t', text: title }),
         note ? el('div', { class: 'm-note', text: note }) : null,
         fields.map((f, i) => el('div', { class: 'f' }, el('div', { class: 'f-label', text: f.label }), nodes[i])),
@@ -1888,17 +2321,17 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function openSuggestFlavor({ source, title = '', wrong = false }) {
     openFormModal({
-      title: 'Предложить вкус',
+      title: tr('Предложить вкус'),
       note: source === 'photo'
-        ? (wrong ? 'Похоже, мы ошиблись. Напишите, какой это вкус, и мы добавим его в каталог.'
-                 : 'Похоже этого вкуса ещё нету. Напишите, какой это вкус, и мы добавим его в каталог.')
-        : 'Напишите название вкуса, которого нет в каталоге, и мы добавим его.',
+        ? (wrong ? tr('Похоже, мы ошиблись. Напишите, какой это вкус, и мы добавим его в каталог.')
+                 : tr('Похоже этого вкуса ещё нету. Напишите, какой это вкус, и мы добавим его в каталог.'))
+        : tr('Напишите название вкуса, которого нет в каталоге, и мы добавим его.'),
       fields: [
-        { label: 'Название вкуса', max: 100, min: 2, required: true, value: title, placeholder: 'Например: Monster Ultra Gold' },
+        { label: tr('Название вкуса'), max: 100, min: 2, required: true, value: title, placeholder: tr('Например: Monster Ultra Gold') },
       ],
       attach: true,
-      submitLabel: 'Отправить',
-      okMsg: 'Спасибо! Предложение отправлено',
+      submitLabel: tr('Отправить'),
+      okMsg: tr('Спасибо! Предложение отправлено'),
       onSubmit: ([name], photo) => api('/api/suggestions/flavor', { method: 'POST', body: formData({ title: name, source }, photo) }),
       onDone: () => {
         if (source === 'photo') {
@@ -1911,12 +2344,12 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 
   function openDevIdea() {
     openFormModal({
-      title: 'Есть идеи по разработке?',
-      note: 'Расскажите, что улучшить или добавить в приложение.',
-      fields: [{ label: 'Ваша идея или отзыв', multiline: true, max: 1000, min: 3, required: true }],
+      title: tr('Есть идеи по разработке?'),
+      note: tr('Расскажите, что улучшить или добавить в приложение.'),
+      fields: [{ label: tr('Ваша идея или отзыв'), multiline: true, max: 1000, min: 3, required: true }],
       attach: true,
-      submitLabel: 'Отправить',
-      okMsg: 'Спасибо! Идея отправлена',
+      submitLabel: tr('Отправить'),
+      okMsg: tr('Спасибо! Идея отправлена'),
       onSubmit: ([text], photo) => api('/api/suggestions/dev', { method: 'POST', body: formData({ text }, photo) }),
     });
   }
@@ -1943,69 +2376,92 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       })));
   }
 
+  // Переключатель языка: сохраняет выбор на сервере и сразу перерисовывает интерфейс без перезагрузки
+  function langSegment() {
+    return el('div', { class: 'seg', role: 'group', 'aria-label': tr('Язык') }, LANGS.map((id) =>
+      el('button', {
+        type: 'button', class: id === LANG ? 'sel' : '', 'aria-pressed': String(id === LANG), text: id.toUpperCase(),
+        onclick: () => { haptic(); if (id !== LANG) setLanguage(id); },
+      })));
+  }
+  async function setLanguage(id) {
+    const prev = LANG;
+    applyLang(id);                                          // новый язык применяется мгновенно
+    render({ keepScroll: true });
+    try {
+      await api('/api/settings', { method: 'PUT', body: { language: id } });
+    } catch (e) {                                           // не сохранилось — возвращаем прежний язык
+      applyLang(prev);
+      render({ keepScroll: true });
+      toast(e.message || tr('Не удалось сохранить'));
+      return;
+    }
+    invalidateApiCache();                                   // тексты достижений приходят с сервера на языке пользователя
+  }
+
   function settingsView(me) {
     const pend = me.pending || { flavors: 0, dev: 0 };
     return el('div', {},
       el('div', { class: 'top' }, el('div', { class: 'left' },
-        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: goBack }),
-        el('h1', { text: 'Настройки' }))),
+        el('button', { class: 'back', 'aria-label': tr('Назад'), text: '‹', onclick: goBack }),
+        el('h1', { text: tr('Настройки') }))),
       me.is_admin
-        ? settingRow('Админ-панель', 'Предложения вкусов и идеи', () => { haptic(); goSub('admin'); }, pend.flavors + pend.dev)
+        ? settingRow(tr('Админ-панель'), tr('Предложения вкусов и идеи'), () => { haptic(); goSub('admin'); }, pend.flavors + pend.dev)
         : null,
-      settingRow('Есть идеи по разработке?', 'Отправить идею или отзыв разработчику', openDevIdea),
+      settingRow(tr('Есть идеи по разработке?'), tr('Отправить идею или отзыв разработчику'), openDevIdea),
       el('section', { class: 'card' },
-        el('div', { class: 'card-title' }, el('h2', { text: 'Язык' }), el('span', { class: 'soon', text: 'скоро' })),
-        stubSegment([{ id: 'ru', label: 'RU' }, { id: 'en', label: 'EN' }, { id: 'uk', label: 'UK' }], 'ru', 'Смена языка скоро появится')),
+        el('div', { class: 'card-title' }, el('h2', { text: tr('Язык') })),
+        langSegment()),
       el('section', { class: 'card' },
-        el('div', { class: 'card-title' }, el('h2', { text: 'Тема оформления' }), el('span', { class: 'soon', text: 'скоро' })),
-        stubSegment([{ id: 'dark', label: 'Тёмная' }, { id: 'light', label: 'Светлая' }], 'dark', 'Светлая тема скоро появится')));
+        el('div', { class: 'card-title' }, el('h2', { text: tr('Тема оформления') }), el('span', { class: 'soon', text: tr('скоро') })),
+        stubSegment([{ id: 'dark', label: tr('Тёмная') }, { id: 'light', label: tr('Светлая') }], 'dark', tr('Светлая тема скоро появится'))));
   }
 
   /* ── экран: админ-панель ── */
   // Просмотр фото на весь экран: тап по фону или Esc закрывают
   function openImageViewer(src) {
-    const img = el('img', { alt: 'Фото' });
-    const note = el('div', { class: 'lb-load', text: 'Загрузка…' });
+    const img = el('img', { alt: tr('Фото') });
+    const note = el('div', { class: 'lb-load', text: tr('Загрузка…') });
     const close = () => { document.removeEventListener('keydown', onKey); lb.remove(); };
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     const lb = el('div', { class: 'lb', role: 'dialog', 'aria-modal': 'true', onclick: close },
-      note, el('button', { class: 'lb-x', type: 'button', 'aria-label': 'Закрыть', text: '✕' }));
+      note, el('button', { class: 'lb-x', type: 'button', 'aria-label': tr('Закрыть'), text: '✕' }));
     document.addEventListener('keydown', onKey);
     document.body.append(lb);
     loadBlob(src).then((url) => { img.src = url; note.replaceWith(img); },
-                       () => { note.textContent = 'Не удалось загрузить фото'; });
+                       () => { note.textContent = tr('Не удалось загрузить фото'); });
   }
 
   function adminSection(title, items, kind) {
     const card = el('section', { class: 'card' },
-      el('div', { class: 'card-title' }, el('h2', { text: title }), el('span', { text: 'активных: ' + items.length })));
+      el('div', { class: 'card-title' }, el('h2', { text: title }), el('span', { text: tr('активных: ') + items.length })));
     if (!items.length) {
-      card.append(el('div', { class: 'note', text: 'Пока ничего нет.' }));
+      card.append(el('div', { class: 'note', text: tr('Пока ничего нет.') }));
       return card;
     }
     items.forEach((it, i) => {                           // номер = позиция в списке, после закрытия задачи нумерация сдвигается
-      const btn = el('button', { class: 'btn sm', type: 'button', text: 'Выполнено' });
+      const btn = el('button', { class: 'btn sm', type: 'button', text: tr('Выполнено') });
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {
           await api(`/api/admin/suggestions/${kind}/${it.id}/done`, { method: 'POST' });
           hapticOk();
-          toast('Задача закрыта');
+          toast(tr('Задача закрыта'));
           render({ keepScroll: true });
         } catch (e) {
           btn.disabled = false;
-          toast(e.message || 'Не удалось закрыть задачу');
+          toast(e.message || tr('Не удалось закрыть задачу'));
         }
       });
       const d = parseUtc(it.created_at);
       const thumb = it.image_url
-        ? el('button', { class: 't-thumb', type: 'button', 'aria-label': 'Открыть фото', onclick: () => openImageViewer(it.image_url) },
-            canImg(it.image_url, 'Приложенное фото'))
+        ? el('button', { class: 't-thumb', type: 'button', 'aria-label': tr('Открыть фото'), onclick: () => openImageViewer(it.image_url) },
+            canImg(it.image_url, tr('Приложенное фото')))
         : null;
       card.append(el('div', { class: 'task' },
         el('div', { class: 't-head' },
           el('b', { text: '#' + (i + 1) }),
-          kind === 'flavor' ? el('span', { class: 'tag', text: it.source === 'photo' ? 'по фото' : 'из поиска' }) : null,
+          kind === 'flavor' ? el('span', { class: 'tag', text: it.source === 'photo' ? tr('по фото') : tr('из поиска') }) : null,
           el('span', { class: 't-meta', text: 'ID ' + it.user_id + (d ? ', ' + fmtDateTime(it.created_at) : '') })),
         el('div', { class: 't-body', text: kind === 'flavor' ? it.title : it.text }),
         kind === 'flavor' && it.comment ? el('div', { class: 'note', text: it.comment }) : null,   // комментарии старых заявок
@@ -2018,19 +2474,19 @@ textarea.field { min-height: 104px; line-height: 1.4; }
   function adminView(d) {
     return el('div', {},
       el('div', { class: 'top' }, el('div', { class: 'left' },
-        el('button', { class: 'back', 'aria-label': 'Назад', text: '‹', onclick: goBack }),
+        el('button', { class: 'back', 'aria-label': tr('Назад'), text: '‹', onclick: goBack }),
         el('div', {},
-          el('h1', { text: 'Админ-панель' }),
-          el('div', { class: 'sub', text: `Вкусов: ${d.flavors.length}, идей: ${d.dev.length}` })))),
-      adminSection('Предложения вкусов', d.flavors, 'flavor'),
-      adminSection('Идеи по разработке', d.dev, 'dev'));
+          el('h1', { text: tr('Админ-панель') }),
+          el('div', { class: 'sub', text: tr(tr('Вкусов: {0}, идей: {1}'), d.flavors.length, d.dev.length) })))),
+      adminSection(tr('Предложения вкусов'), d.flavors, 'flavor'),
+      adminSection(tr('Идеи по разработке'), d.dev, 'dev'));
   }
 
   function errorView(err) {
     return el('div', { class: 'empty' },
-      el('b', { text: 'Не удалось загрузить' }),
-      err.message || 'Что-то пошло не так.',
-      el('div', {}, el('button', { class: 'pill', text: 'Повторить', onclick: () => render() })));
+      el('b', { text: tr('Не удалось загрузить') }),
+      err.message || tr('Что-то пошло не так.'),
+      el('div', {}, el('button', { class: 'pill', text: tr('Повторить'), onclick: () => render() })));
   }
 
   /* ── навигация ── */
@@ -2039,7 +2495,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       el('button', {
         class: t.id === state.tab ? 'active' : '',
         onclick: () => { haptic(); state.tab = t.id; state.sub = 'main'; render(); },
-      }, el('span', { html: ICONS[t.id] }), el('span', { text: t.label }))));
+      }, el('span', { html: ICONS[t.id] }), el('span', { text: tr(t.label) }))));
   }
 
   // Кнопка «назад» Telegram: закрывает окно или возвращает из каталога в коллекцию
@@ -2096,7 +2552,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     }
   }
 
-  render();
+  // Язык берём с сервера до первой отрисовки (не дольше 1,5 с: при медленной сети сначала рисуем по-русски)
+  const langReq = request('/api/settings').then((s) => (s && s.language) || null, () => null);
+  Promise.race([langReq, new Promise((r) => setTimeout(() => r(null), 1500))]).then((l) => {
+    if (l) applyLang(l);
+    render();
+    if (!l) langReq.then((late) => { if (late && late !== LANG) { applyLang(late); render({ keepScroll: true }); } });
+  });
   // заранее грузим GIF достижений, чтобы показать их мгновенно
   setTimeout(preloadAllGifs, 1500);
 })();
