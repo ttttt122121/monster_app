@@ -93,6 +93,8 @@ LIT_ENERGY_ID = 0                          # служебный id «банки 
 # подходящем действии, а не один раз. Остальные достижения сообщаются в new_achievements строго один раз.
 GIF_ACHIEVEMENTS = {"lando", "vr46", "hamilton", "litvin"}
 LIT_ACHIEVEMENT_ID = "litvin"              # скрытое достижение, которое открывает скан такой банки
+LANGUAGES = ("ru", "ua", "en")             # поддерживаемые языки интерфейса; ru — по умолчанию
+DEFAULT_LANGUAGE = "ru"
 DB_BUSY_TIMEOUT = 15                       # секунд ждать освобождения блокировки записи SQLite
 PHOTO_MIN_CONFIDENCE = 0.38               # ниже — считаем, что не распознали
 PHOTO_RATE = (10, 60)                     # не больше 10 фото за 60 секунд на пользователя
@@ -169,6 +171,12 @@ CREATE TABLE IF NOT EXISTS user_achievements (
     achievement_id TEXT    NOT NULL,
     unlocked_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- UTC, 'YYYY-MM-DD HH:MM:SS'
     PRIMARY KEY (user_id, achievement_id)
+);
+
+-- Настройки пользователя. Таблицу читает и пишет и бот (bot.py): язык выбирается в чате при первом /start.
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id  INTEGER PRIMARY KEY,
+    language TEXT NOT NULL DEFAULT 'ru' CHECK (language IN ('ru', 'ua', 'en'))
 );
 
 -- Накопительные счётчики пользователя (то, что нельзя восстановить из текущих таблиц),
@@ -415,12 +423,24 @@ def bump_counter(db: sqlite3.Connection, user_id: int, key: str, by: int = 1) ->
     )
 
 
+def get_language(db: sqlite3.Connection, user_id: int) -> str:
+    row = db.execute("SELECT language FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+    return row["language"] if row and row["language"] in LANGUAGES else DEFAULT_LANGUAGE
+
+
+def localized(a: dict, lang: str, field: str) -> str:
+    """Текст достижения на языке пользователя: a["i18n"][lang][field], иначе исходный (русский) из файла."""
+    tr = ((a.get("i18n") or {}).get(lang) or {}).get(field)
+    return str(tr if tr else (a.get(field) or (a["id"] if field == "title" else "")))
+
+
 def compute_achievements(db: sqlite3.Connection, user_id: int) -> list[dict]:
     """Текущий прогресс по каждому достижению (без записи в базу).
     Возвращает [{id, title, description, icon, unit, progress, target, reached}]."""
     if ACHIEVEMENTS is None:
         load_achievements()
 
+    lang = get_language(db, user_id)
     flavors = db.execute("SELECT id, title, category_id FROM flavors").fetchall()
     cats = db.execute("SELECT id, name FROM categories").fetchall()
     mine = {
@@ -527,8 +547,8 @@ def compute_achievements(db: sqlite3.Connection, user_id: int) -> list[dict]:
         target = float(target)
         out.append({
             "id": a["id"],
-            "title": str(a.get("title") or a["id"]),
-            "description": str(a.get("description") or ""),
+            "title": localized(a, lang, "title"),
+            "description": localized(a, lang, "description"),
             "icon": str(a.get("icon") or "trophy"),
             "hidden": bool(a.get("hidden")),
             "flavor_ids": flavor_ids_of,
@@ -587,7 +607,8 @@ def grant_achievement(db: sqlite3.Connection, user_id: int, achievement_id: str)
     )
     if not cur.rowcount and achievement_id not in GIF_ACHIEVEMENTS:
         return None                                      # уже было и без GIF — второй раз не сообщаем
-    return {"id": a["id"], "title": str(a.get("title") or a["id"]), "description": str(a.get("description") or "")}
+    lang = get_language(db, user_id)
+    return {"id": a["id"], "title": localized(a, lang, "title"), "description": localized(a, lang, "description")}
 
 
 def new_achievements(db: sqlite3.Connection, user_id: int, added_flavor_id: int | None = None) -> list[dict]:
@@ -1200,10 +1221,32 @@ def search_by_photo(
 
 # ── Профиль, предложения и админ-панель ──
 
+class SettingsIn(BaseModel):
+    language: Literal["ru", "ua", "en"]
+
+
+@app.get("/api/settings")
+def get_settings(user_id: int = Depends(current_user), db: sqlite3.Connection = Depends(get_db)):
+    """Настройки пользователя. Пока одна: language (ru | ua | en; по умолчанию ru)."""
+    return {"language": get_language(db, user_id)}
+
+
+@app.put("/api/settings")
+def put_settings(body: SettingsIn, user_id: int = Depends(current_user), db: sqlite3.Connection = Depends(get_db)):
+    """Сохраняет выбранный язык. Тот же выбор видит и бот (общая таблица user_settings)."""
+    db.execute(
+        "INSERT INTO user_settings (user_id, language) VALUES (?, ?) "
+        "ON CONFLICT(user_id) DO UPDATE SET language = excluded.language",
+        (user_id, body.language),
+    )
+    db.commit()
+    return {"ok": True, "language": body.language}
+
+
 @app.get("/api/me")
 def get_me(user_id: int = Depends(current_user), db: sqlite3.Connection = Depends(get_db)):
     """Кто я и админ ли я. Для админа — ещё сколько предложений ждут обработки."""
-    out: dict = {"user_id": user_id, "is_admin": user_id in ADMIN_IDS}
+    out: dict = {"user_id": user_id, "is_admin": user_id in ADMIN_IDS, "language": get_language(db, user_id)}
     if out["is_admin"]:
         out["pending"] = {
             "flavors": db.execute("SELECT COUNT(*) FROM flavor_suggestions WHERE status = 'open'").fetchone()[0],
