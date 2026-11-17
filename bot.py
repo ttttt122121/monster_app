@@ -5,15 +5,19 @@ Telegram-бот «Коллекционера вкусов» (aiogram 3.x). Ра�
 что и приложение (таблица user_settings): тот же язык потом открывается в Mini App.
 Если язык уже выбран, бот сразу присылает приветствие и кнопку запуска приложения.
 
-Запуск:
-    export BOT_TOKEN="123456:ABC..."                     # токен бота от @BotFather
-    export WEB_APP_URL="https://your-app.up.railway.app" # адрес Mini App, только https
-    export DB_PATH="/data/app.db"                        # необязательно: путь к базе сайта (по умолчанию как в main.py)
-    python bot.py
+Если пользователь блокирует/удаляет бота (my_chat_member: kicked / left), его запись в user_settings
+удаляется: при следующем /start язык выбирается заново.
+
+Настройки берутся из файла .env рядом с bot.py (см. .env.example) или из переменных окружения
+(окружение приоритетнее файла):
+    BOT_TOKEN=123456:ABC...                     # токен бота от @BotFather
+    WEB_APP_URL= # адрес Mini App, только https
+    DB_PATH=/data/app.db                        # необязательно: путь к базе сайта (по умолчанию как в main.py)
+Запуск:  python bot.py
 
 ВАЖНО: бот должен видеть тот же файл базы, что и main.py (один сервис/один том Railway, либо общий DB_PATH).
 
-Зависимости:  pip install aiogram
+Зависимости:  pip install aiogram python-dotenv   (python-dotenv необязателен: без него .env читается встроенным разбором)
 """
 from __future__ import annotations
 
@@ -26,16 +30,44 @@ from contextlib import closing
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher, F, Router
-from aiogram.filters import Command
+from aiogram.filters import KICKED, LEFT, ChatMemberUpdatedFilter, Command
 from aiogram.types import (
-    CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo,
+    CallbackQuery, ChatMemberUpdated, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo,
 )
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def load_env_file(path: Path) -> None:
+    """Подгружает переменные из .env. Уже заданные в окружении не перезаписываются.
+    Используется python-dotenv, а если он не установлен — встроенный разбор формата KEY=value."""
+    if not path.is_file():
+        return
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(path, override=False, encoding="utf-8")
+        return
+    except ImportError:
+        pass
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.removeprefix("export ").strip(), value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        os.environ.setdefault(key, value)
+
+
+load_env_file(BASE_DIR / ".env")           # до чтения os.getenv ниже
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WEB_APP_URL = os.getenv("WEB_APP_URL", "").strip()
 
 # Путь к базе — тот же, что в main.py: DB_PATH из окружения, иначе app.db на томе /data (или рядом с файлом)
-BASE_DIR = Path(__file__).resolve().parent
 VOLUME_DIR = Path("/data") if Path("/data").is_dir() else BASE_DIR
 DB_PATH = Path(os.getenv("DB_PATH", VOLUME_DIR / "app.db"))
 
@@ -59,7 +91,7 @@ TEXTS = {
         "saved": "Language saved: English",
     },
 }
-CHOOSE_LANGUAGE = "Выбрать язык / Обери мову / Choose language"
+CHOOSE_LANGUAGE = "Choose language:"            # строго на английском: язык пользователя ещё неизвестен
 LANGUAGE_BUTTONS = (("RU", "ru"), ("UA", "ua"), ("EN", "en"))
 CALLBACK_PREFIX = "lang:"
 
@@ -93,6 +125,13 @@ def get_language(user_id: int) -> str | None:
     with closing(_connect()) as conn:
         row = conn.execute("SELECT language FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
     return row[0] if row and row[0] in LANGUAGES else None
+
+
+def reset_language(user_id: int) -> None:
+    """Удаляет настройки пользователя: язык выбирается заново при следующем /start."""
+    with closing(_connect()) as conn:
+        conn.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
+        conn.commit()
 
 
 def set_language(user_id: int, language: str) -> None:
@@ -139,6 +178,15 @@ async def cmd_start(message: Message) -> None:
 async def cmd_language(message: Message) -> None:
     """Сменить язык позже (выбор общий с приложением)."""
     await message.answer(CHOOSE_LANGUAGE, reply_markup=language_keyboard())
+
+
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=KICKED | LEFT))
+async def on_bot_removed(event: ChatMemberUpdated) -> None:
+    """Пользователь заблокировал или удалил бота: забываем его язык (в личном чате chat.id == user_id)."""
+    if event.chat.type != "private":
+        return
+    await asyncio.to_thread(reset_language, event.chat.id)
+    log.info("Бот удалён пользователем %s: язык сброшен", event.chat.id)
 
 
 @router.callback_query(F.data.startswith(CALLBACK_PREFIX))

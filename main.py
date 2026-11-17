@@ -13,12 +13,13 @@
       seed.json             (необязательно: каталог; при каждом старте в базу добавляется всё, чего там ещё нет)
       static/images/1.png   (имя файла = ID вкуса)
 
-Переменные окружения:
+Переменные окружения (можно положить в файл .env рядом с main.py — см. .env.example;
+настоящие переменные окружения, например на Railway, имеют приоритет над .env):
     BOT_TOKEN   — токен Telegram-бота. Нужен для проверки initData.
     DEV_USER_ID — если BOT_TOKEN не задан, приложение работает в dev-режиме
                   от имени этого пользователя (по умолчанию 1). Не использовать в проде!
     ADMIN_IDS   — Telegram user_id администраторов через запятую, например "111,222".
-                  Только они видят «Админ-панель» и могут закрывать предложения.
+                  Только они видят «Админ-панель» и могут закрывать или отклонять предложения.
     DEEPSEEK_API_KEY — ключ DeepSeek API для «Добавить по фото». Без него эндпоинт
                   /api/search-by-photo отвечает 503, остальное приложение работает.
     DEEPSEEK_MODEL   — модель с поддержкой изображений (по умолчанию deepseek-flash).
@@ -38,6 +39,7 @@ import io
 import json
 import logging
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -60,6 +62,34 @@ except ImportError:                        # pragma: no cover
     Image = ImageOps = None
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+def load_env_file(path: Path) -> None:
+    """Подгружает переменные из .env. Уже заданные в окружении (Railway и т.п.) не перезаписываются.
+    Используется python-dotenv, а если он не установлен — встроенный разбор формата KEY=value."""
+    if not path.is_file():
+        return
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(path, override=False, encoding="utf-8")
+        return
+    except ImportError:
+        pass
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.removeprefix("export ").strip(), value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        elif " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        os.environ.setdefault(key, value)
+
+
+load_env_file(BASE_DIR / ".env")           # должно выполняться до чтения os.getenv ниже
+
 # Постоянное хранилище: на Railway Volume монтируется в /data — там живут база и фото предложений,
 # они переживают деплои. Без тома (локально) всё лежит рядом с проектом.
 VOLUME_DIR = Path("/data") if Path("/data").is_dir() else BASE_DIR
@@ -75,6 +105,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 DEV_USER_ID = int(os.getenv("DEV_USER_ID", "1"))
 ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "").replace(";", ",").replace(" ", ",").split(",") if x.strip().isdigit()}
 SUGGEST_MAX_SIDE = 1600                  # длинная сторона приложенного к предложению фото, px
+MY_SUGGESTIONS_LIMIT = 50                 # сколько своих предложений каждого вида показывать в настройках
 SUGGEST_RATE = (5, 3600)                  # не больше 5 предложений каждого вида в час на пользователя
 INIT_DATA_MAX_AGE = 24 * 60 * 60  # секунд
 
@@ -137,6 +168,7 @@ CREATE TABLE IF NOT EXISTS wishlist (
 );
 CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist(user_id, added_at DESC);
 
+-- Статусы предложений: open — на рассмотрении (ставится при создании), done — выполнено, rejected — отклонено.
 -- «Предложить вкус»: вкус, которого нет в каталоге (из текстового поиска или поиска по фото)
 CREATE TABLE IF NOT EXISTS flavor_suggestions (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,7 +177,7 @@ CREATE TABLE IF NOT EXISTS flavor_suggestions (
     comment    TEXT    NOT NULL DEFAULT '',                -- устарело: поле больше не заполняется, старые записи сохранены
     image_path TEXT    NOT NULL DEFAULT '',                -- имя файла в static/suggestions ('' — фото нет)
     source     TEXT    NOT NULL DEFAULT 'text' CHECK (source IN ('text', 'photo')),
-    status     TEXT    NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+    status     TEXT    NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done', 'rejected')),
     created_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     closed_at  TEXT,
     closed_by  INTEGER
@@ -158,7 +190,7 @@ CREATE TABLE IF NOT EXISTS dev_suggestions (
     user_id    INTEGER NOT NULL,
     text       TEXT    NOT NULL,
     image_path TEXT    NOT NULL DEFAULT '',                -- имя файла в static/suggestions ('' — фото нет)
-    status     TEXT    NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+    status     TEXT    NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done', 'rejected')),
     created_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     closed_at  TEXT,
     closed_by  INTEGER
@@ -224,6 +256,34 @@ def migrate(conn: sqlite3.Connection) -> None:
         tcols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
         if "image_path" not in tcols:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN image_path TEXT NOT NULL DEFAULT ''")
+        _allow_rejected_status(conn, table)
+
+
+def _allow_rejected_status(conn: sqlite3.Connection, table: str) -> None:
+    """В старых базах CHECK допускает только open/done. SQLite не умеет менять CHECK на месте,
+    поэтому таблица пересоздаётся (данные копируются как есть) — всё в одной транзакции."""
+    row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone()
+    if row is None or "'rejected'" in row["sql"]:
+        return
+    table_ddl = re.search(rf"CREATE TABLE IF NOT EXISTS {table} \(.*?\n\);", SCHEMA, re.S).group(0)
+    index_ddl = re.search(rf"CREATE INDEX IF NOT EXISTS \w+ ON {table}\(.*?\);", SCHEMA, re.S).group(0)
+    old_cols = [r["name"] for r in conn.execute(f"PRAGMA table_info({table})")]
+    conn.commit()
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND sql IS NOT NULL", (table,)).fetchall():
+            conn.execute(f"DROP INDEX {r['name']}")
+        conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
+        conn.execute(table_ddl)
+        new_cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        cols = ", ".join(c for c in old_cols if c in new_cols)
+        conn.execute(f"INSERT INTO {table} ({cols}) SELECT {cols} FROM {table}_old")
+        conn.execute(f"DROP TABLE {table}_old")
+        conn.execute(index_ddl)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def init_db() -> None:
@@ -1364,6 +1424,26 @@ def suggest_dev(
     return {"ok": True}
 
 
+@app.get("/api/suggestions/mine")
+def my_suggestions(user_id: int = Depends(current_user), db: sqlite3.Connection = Depends(get_db)):
+    """Предложения вкусов и идеи самого пользователя со статусом: open (на рассмотрении), done, rejected.
+    Сначала новые; не больше MY_SUGGESTIONS_LIMIT каждого вида. Язык статусов — на клиенте."""
+    def rows(sql: str) -> list[dict]:
+        out = []
+        for r in db.execute(sql, (user_id, MY_SUGGESTIONS_LIMIT)).fetchall():
+            d = dict(r)
+            d["image_url"] = suggestion_image_url(d.pop("image_path", ""))
+            out.append(d)
+        return out
+
+    return {
+        "flavors": rows("SELECT id, title, status, image_path, created_at, closed_at FROM flavor_suggestions "
+                        "WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?"),
+        "dev": rows("SELECT id, text, status, image_path, created_at, closed_at FROM dev_suggestions "
+                    "WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?"),
+    }
+
+
 @app.get("/api/admin/suggestions")
 def admin_list_suggestions(_: int = Depends(admin_user), db: sqlite3.Connection = Depends(get_db)):
     """Активные (не закрытые) предложения. Порядок — от старых к новым; номера в списке
@@ -1390,6 +1470,18 @@ def admin_list_suggestions(_: int = Depends(admin_user), db: sqlite3.Connection 
 _SUGGESTION_TABLES = {"flavor": "flavor_suggestions", "dev": "dev_suggestions"}
 
 
+def _close_suggestion(db: sqlite3.Connection, kind: str, item_id: int, admin_id: int, status: str) -> dict:
+    table = _SUGGESTION_TABLES[kind]          # имя таблицы — только из белого списка
+    cur = db.execute(
+        f"UPDATE {table} SET status = ?, closed_at = CURRENT_TIMESTAMP, closed_by = ? "
+        "WHERE id = ? AND status = 'open'",
+        (status, admin_id, item_id),
+    )
+    if cur.rowcount == 0:
+        raise HTTPException(404, "Задача не найдена или уже закрыта")
+    return {"ok": True, "status": status}
+
+
 @app.post("/api/admin/suggestions/{kind}/{item_id}/done")
 def admin_close_suggestion(
     kind: Literal["flavor", "dev"],
@@ -1398,12 +1490,15 @@ def admin_close_suggestion(
     db: sqlite3.Connection = Depends(get_db),
 ):
     """Кнопка «Выполнено»: закрывает задачу (запись остаётся в базе со статусом done)."""
-    table = _SUGGESTION_TABLES[kind]          # имя таблицы — только из белого списка
-    cur = db.execute(
-        f"UPDATE {table} SET status = 'done', closed_at = CURRENT_TIMESTAMP, closed_by = ? "
-        "WHERE id = ? AND status = 'open'",
-        (admin_id, item_id),
-    )
-    if cur.rowcount == 0:
-        raise HTTPException(404, "Задача не найдена или уже закрыта")
-    return {"ok": True}
+    return _close_suggestion(db, kind, item_id, admin_id, "done")
+
+
+@app.post("/api/admin/suggestions/{kind}/{item_id}/reject")
+def admin_reject_suggestion(
+    kind: Literal["flavor", "dev"],
+    item_id: int,
+    admin_id: int = Depends(admin_user),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    """Кнопка «Отклонить»: запись остаётся в базе со статусом rejected и пропадает из активных."""
+    return _close_suggestion(db, kind, item_id, admin_id, "rejected")

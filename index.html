@@ -412,6 +412,14 @@ textarea.field { min-height: 104px; line-height: 1.4; }
 .lb .lb-x { position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 12px; width: 36px; height: 36px;
   color: #fff; font-size: 22px; }
 .lb .lb-load { color: var(--muted); }
+.t-actions { display: flex; gap: 8px; }
+.t-actions .btn { flex: 1; }
+.tag.st-open { color: var(--muted); }
+.tag.st-done { color: var(--accent); border-color: var(--accent); }
+.tag.st-rejected { color: #ff6b6b; border-color: #ff6b6b; }
+.my-sugg { display: flex; flex-direction: column; gap: 6px; }
+.my-sugg .sec { color: var(--muted); font-size: 12px; margin: 14px 0 0; }
+.my-sugg .sec:first-child { margin-top: 0; }
 .t-body { font-size: 15px; line-height: 1.4; word-break: break-word; white-space: pre-wrap; }
 .btn.sm { height: 38px; font-size: 14px; }
 </style>
@@ -616,6 +624,14 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       "Вкусов: {0}, идей: {1}": "Смаків: {0}, ідей: {1}",
       "Предложения вкусов": "Пропозиції смаків",
       "Идеи по разработке": "Ідеї щодо розробки",
+      "Отклонить": "Відхилити",
+      "Отклонено": "Відхилено",
+      "На рассмотрении": "На розгляді",
+      "Задача отклонена": "Завдання відхилено",
+      "Мои предложения": "Мої пропозиції",
+      "Отзывы и предложения": "Відгуки та пропозиції",
+      "История и отправка идей": "Історія та надсилання ідей",
+      "Вы пока ничего не отправляли.": "Ви ще нічого не надсилали.",
       "Некорректные данные Telegram": "Некоректні дані Telegram",
       "Нет подписи Telegram": "Немає підпису Telegram",
       "Неверная подпись Telegram": "Невірний підпис Telegram",
@@ -820,6 +836,14 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       "Вкусов: {0}, идей: {1}": "{0} flavors, {1} ideas",
       "Предложения вкусов": "Flavor suggestions",
       "Идеи по разработке": "App ideas",
+      "Отклонить": "Reject",
+      "Отклонено": "Rejected",
+      "На рассмотрении": "Under review",
+      "Задача отклонена": "Task rejected",
+      "Мои предложения": "My suggestions",
+      "Отзывы и предложения": "Feedback and suggestions",
+      "История и отправка идей": "History and sending ideas",
+      "Вы пока ничего не отправляли.": "You haven’t sent anything yet.",
       "Некорректные данные Telegram": "Invalid Telegram data",
       "Нет подписи Telegram": "Missing Telegram signature",
       "Неверная подпись Telegram": "Invalid Telegram signature",
@@ -2351,12 +2375,13 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       submitLabel: tr('Отправить'),
       okMsg: tr('Спасибо! Идея отправлена'),
       onSubmit: ([text], photo) => api('/api/suggestions/dev', { method: 'POST', body: formData({ text }, photo) }),
+      onDone: () => { if (state.sub === 'feedback') render({ keepScroll: true }); },   // новая идея сразу появляется в списке
     });
   }
 
   /* ── экран: настройки (в «Профиле») ── */
   function goBack() {
-    state.sub = (state.tab === 'profile' && state.sub === 'admin') ? 'settings' : 'main';
+    state.sub = (state.tab === 'profile' && (state.sub === 'admin' || state.sub === 'feedback')) ? 'settings' : 'main';
     render();
   }
 
@@ -2399,6 +2424,30 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     invalidateApiCache();                                   // тексты достижений приходят с сервера на языке пользователя
   }
 
+  const SUGG_STATUS = { open: 'На рассмотрении', done: 'Выполнено', rejected: 'Отклонено' };
+
+  // «Мои предложения»: свои предложения вкусов и идеи с текущим статусом (на языке интерфейса)
+  function mySuggestionsCard(mine) {
+    const card = el('section', { class: 'card' }, el('div', { class: 'card-title' }, el('h2', { text: tr('Мои предложения') })));
+    const groups = [[tr('Предложения вкусов'), mine.flavors, 'title'], [tr('Идеи по разработке'), mine.dev, 'text']];
+    if (!mine.flavors.length && !mine.dev.length) {
+      card.append(el('div', { class: 'note', text: tr('Вы пока ничего не отправляли.') }));
+      return card;
+    }
+    const list = el('div', { class: 'my-sugg' });
+    groups.forEach(([name, items, field]) => {
+      if (!items.length) return;
+      list.append(el('div', { class: 'sec', text: name }));
+      items.forEach((it) => list.append(el('div', { class: 'task' },
+        el('div', { class: 't-head' },
+          el('span', { class: 'tag st-' + it.status, text: tr(SUGG_STATUS[it.status] || SUGG_STATUS.open) }),
+          el('span', { class: 't-meta', text: fmtDate(it.created_at) })),
+        el('div', { class: 't-body', text: it[field] }))));
+    });
+    card.append(list);
+    return card;
+  }
+
   function settingsView(me) {
     const pend = me.pending || { flavors: 0, dev: 0 };
     return el('div', {},
@@ -2408,13 +2457,23 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       me.is_admin
         ? settingRow(tr('Админ-панель'), tr('Предложения вкусов и идеи'), () => { haptic(); goSub('admin'); }, pend.flavors + pend.dev)
         : null,
-      settingRow(tr('Есть идеи по разработке?'), tr('Отправить идею или отзыв разработчику'), openDevIdea),
+      settingRow(tr('Отзывы и предложения'), tr('История и отправка идей'), () => { haptic(); goSub('feedback'); }),
       el('section', { class: 'card' },
         el('div', { class: 'card-title' }, el('h2', { text: tr('Язык') })),
         langSegment()),
       el('section', { class: 'card' },
         el('div', { class: 'card-title' }, el('h2', { text: tr('Тема оформления') }), el('span', { class: 'soon', text: tr('скоро') })),
         stubSegment([{ id: 'dark', label: tr('Тёмная') }, { id: 'light', label: tr('Светлая') }], 'dark', tr('Светлая тема скоро появится'))));
+  }
+
+  /* ── экран: отзывы и предложения (в «Настройках») ── */
+  function feedbackView(mine) {
+    return el('div', {},
+      el('div', { class: 'top' }, el('div', { class: 'left' },
+        el('button', { class: 'back', 'aria-label': tr('Назад'), text: '‹', onclick: () => goSub('settings') }),
+        el('h1', { text: tr('Отзывы и предложения') }))),
+      settingRow(tr('Отправить идею или отзыв разработчику'), tr('Расскажите, что улучшить или добавить в приложение.'), openDevIdea),
+      mySuggestionsCard(mine));
   }
 
   /* ── экран: админ-панель ── */
@@ -2441,18 +2500,21 @@ textarea.field { min-height: 104px; line-height: 1.4; }
     }
     items.forEach((it, i) => {                           // номер = позиция в списке, после закрытия задачи нумерация сдвигается
       const btn = el('button', { class: 'btn sm', type: 'button', text: tr('Выполнено') });
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
+      const rejectBtn = el('button', { class: 'btn ghost sm', type: 'button', text: tr('Отклонить') });
+      const closeWith = (action, doneMsg) => async () => {
+        btn.disabled = rejectBtn.disabled = true;
         try {
-          await api(`/api/admin/suggestions/${kind}/${it.id}/done`, { method: 'POST' });
+          await api(`/api/admin/suggestions/${kind}/${it.id}/${action}`, { method: 'POST' });
           hapticOk();
-          toast(tr('Задача закрыта'));
+          toast(doneMsg);
           render({ keepScroll: true });
         } catch (e) {
-          btn.disabled = false;
-          toast(e.message || tr('Не удалось закрыть задачу'));
+          btn.disabled = rejectBtn.disabled = false;
+          toast(tr(e.message) || tr('Не удалось закрыть задачу'));
         }
-      });
+      };
+      btn.addEventListener('click', closeWith('done', tr('Задача закрыта')));
+      rejectBtn.addEventListener('click', closeWith('reject', tr('Задача отклонена')));
       const d = parseUtc(it.created_at);
       const thumb = it.image_url
         ? el('button', { class: 't-thumb', type: 'button', 'aria-label': tr('Открыть фото'), onclick: () => openImageViewer(it.image_url) },
@@ -2466,7 +2528,7 @@ textarea.field { min-height: 104px; line-height: 1.4; }
         el('div', { class: 't-body', text: kind === 'flavor' ? it.title : it.text }),
         kind === 'flavor' && it.comment ? el('div', { class: 'note', text: it.comment }) : null,   // комментарии старых заявок
         thumb,
-        btn));
+        el('div', { class: 't-actions' }, btn, rejectBtn)));
     });
     return card;
   }
@@ -2527,6 +2589,8 @@ textarea.field { min-height: 104px; line-height: 1.4; }
       let view;
       if (state.tab === 'profile' && state.sub === 'settings') {
         view = settingsView(await api('/api/me'));
+      } else if (state.tab === 'profile' && state.sub === 'feedback') {
+        view = feedbackView(await api('/api/suggestions/mine'));
       } else if (state.tab === 'profile' && state.sub === 'admin') {
         view = adminView(await api('/api/admin/suggestions'));
       } else if (state.tab === 'profile') {
